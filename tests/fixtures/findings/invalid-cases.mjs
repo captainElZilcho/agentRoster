@@ -99,6 +99,7 @@ export const invalidCases = [
   rule("fail-severity-info", s((d) => { d.entries[0].severity = "info"; }), "/entries/0/severity", SEVERITY_MSG("fail")),
   rule("fail-severity-null", s((d) => { d.entries[0].severity = null; }), "/entries/0/severity", SEVERITY_MSG("fail")),
   rule("concern-severity-null", s((d) => { d.entries[1].severity = null; }), "/entries/1/severity", SEVERITY_MSG("concern")),
+  rule("concern-severity-info", s((d) => { d.entries[1].severity = "info"; }), "/entries/1/severity", SEVERITY_MSG("concern")),
   rule("info-severity-low", f((d) => { d.entries[3].severity = "low"; }), "/entries/3/severity",
     'must be "info" when result is "info"'),
   rule("info-severity-null", f((d) => { d.entries[3].severity = null; }), "/entries/3/severity",
@@ -152,6 +153,27 @@ export const invalidCases = [
   rule("order-card-not-sorted", f((d) => { d.entries.splice(4, 2, d.entries[5], d.entries[4]); }), "/entries/5",
     'out of order: "completeness.role-defined:change-gate" must come before "least-agency.turn-limit:change-gate"'),
 
+  rule("order-severity-medium-before-high",
+    f((d) => { d.entries[1].result = "fail"; d.entries.splice(0, 2, d.entries[1], d.entries[0]); }), "/entries/1",
+    'out of order: "least-agency.turn-limit:fleet-scout" must come before "completeness.goals-defined:ops-orchestrator"'),
+  rule("order-roster-wide-after-card",
+    f((d) => {
+      const extra = structuredClone(d.entries[3]);
+      extra.id = "orchestration.agent-count:fleet-scout";
+      extra.card = "fleet-scout";
+      extra.kind = "agent";
+      d.entries.splice(3, 0, extra);
+    }), "/entries/4",
+    'out of order: "orchestration.agent-count:roster:all" must come before "orchestration.agent-count:fleet-scout"'),
+  rule("order-id-tie-break",
+    f((d) => {
+      const extra = structuredClone(d.entries[4]);
+      extra.id = "completeness.a-check:change-gate";
+      extra.check = "a-check";
+      d.entries.splice(5, 0, extra);
+    }), "/entries/5",
+    'out of order: "completeness.a-check:change-gate" must come before "completeness.role-defined:change-gate"'),
+
   // summary
   rule("summary-wrong-count", s((d) => { d.summary[0].counts.fail = 1; }), "/summary",
     `does not match the entries; expected ${secondSummary}`),
@@ -175,8 +197,8 @@ export const invalidCases = [
   schema("snapshot-id", s((d) => { d.snapshot.id = "run-1"; }), "/snapshot/id",
     'must be a run id like "run-2026-11-05-1"'),
   schema("snapshot-project-path", s((d) => { d.snapshot.project = "home/me/app"; }), "/snapshot/project",
-    "must be a project name, not a path"),
-  ...["src\\agent.py", "/abs/x.py", "C:/x.py", "../x.py", "a/../b.py"].map((file, i) =>
+    "must be a project name: non-empty text, not a path"),
+  ...["src\\agent.py", "/abs/x.py", "C:/x.py", "../x.py", "a/../b.py", "~/Documents/x.py", "file:///x"].map((file, i) =>
     schema(`evidence-file-${i}`, s((d) => { d.entries[0].evidence[0].file = file; }),
       "/entries/0/evidence/0/file", pathMsg)),
   schema("what-none", s((d) => { d.entries[0].what = "none"; }), "/entries/0/what",

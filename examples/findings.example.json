@@ -122,16 +122,16 @@
       "method": "judgement",
       "evidence": [
         {
-          "file": "services/ops/orchestrator.py",
+          "file": "prompts/ops-orchestrator.md",
           "line": 58,
           "quote": "Never draft an operator that can restart containers without approval.",
           "found_by": "agent"
         }
       ],
-      "what": "The rule that drafting a restart-capable operator needs approval is written only in the instructions. Nothing in the config or code enforces it.",
-      "why": "A rule that only the model reads can be missed or argued around; a setting in config cannot.",
-      "impact": "One misread instruction could let the orchestrator draft and run a restart-capable operator with no one approving it.",
-      "fix": "In services/ops/orchestrator.py, make the draft call require approval in code (from draft(role) to draft(role, require_approval=True)) and keep the sentence as a reminder.",
+      "what": "The rule that drafting a restart-capable operator needs approval is written only in the instructions. Nothing in the Claude Code settings enforces it.",
+      "why": "A rule that only the model reads can be missed or argued around; a permission setting cannot.",
+      "impact": "One misread instruction could let the orchestrator start a restart-capable operator with no one approving it.",
+      "fix": "In .claude/settings.json, add \"Agent(operator)\" to permissions.ask so Claude Code asks a person before the orchestrator starts an operator, and keep the sentence in prompts/ops-orchestrator.md as a reminder.",
       "decide": null,
       "enforcement": "stated",
       "confidence": "medium",
@@ -277,7 +277,7 @@
       "severity": null,
       "method": "rule",
       "evidence": [],
-      "what": "This agent never hands work to another agent, so a delegation limit does not apply.",
+      "what": "This agent never delegates work; it only returns its decision to the orchestrator, so a delegation limit does not apply.",
       "why": null,
       "impact": null,
       "fix": null,

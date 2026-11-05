@@ -26,10 +26,11 @@ see.
 
 **Unknown is not missing.**
 - **Missing**: the scan saw the whole place where something should be, and it isn't there. On the
-  card the field is `null`; in `findings.json` the check is a `fail`.
+  card the field is `null` (or `[]` for a list field); in `findings.json` the check is a `fail`.
 - **Unknown**: the scan couldn't see the place (for example, the prompt is loaded from a database).
-  On the card the field is also `null`; in `findings.json` the check is `unknown`; and
-  `coverage.json` says what couldn't be seen and why.
+  On the card the field is also `null` (or `[]` for a list field); in `findings.json` the check is
+  `unknown`; and `coverage.json` says what couldn't be seen and why. The card alone can't tell
+  unknown from missing, which is why `coverage.json` is needed.
 
 A file never says something passed or failed when the scan couldn't see it.
 
@@ -67,7 +68,7 @@ Both files start with the same header, in a `snapshot` object. All keys are pres
 
 ### 2.2 Evidence
 
-Evidence is the card's evidence item, unchanged: `{"file", "line", "quote", "found_by"}`.
+Evidence has the same fields as the card's evidence item, `{"file", "line", "quote", "found_by"}`; these two files also enforce the path rules.
 
 | Field | Values |
 |---|---|
@@ -101,7 +102,7 @@ All four keys are present. `findings` is the format version.
 
 | Field | Values |
 |---|---|
-| `id` | `<pack>.<check>:<card-id>`, for example `least-agency.turn-limit:fleet-scout`. For a roster-wide check: `<pack>.<check>:roster:<key>`, where `key` is stable (for example, the card ids in a cycle, sorted and joined by `+`). Unique in the file, and must agree with `pack`, `check` and `card` |
+| `id` | `<pack-id>.<check>:<card-id>`, for example `least-agency.turn-limit:fleet-scout`. For a roster-wide check: `<pack-id>.<check>:roster:<key>`, where `key` is stable (for example, the card ids in a cycle, sorted and joined by `+`). Unique in the file, and must agree with `pack`, `check` and `card` |
 | `pack` | `<pack-id>@<version>`, for example `least-agency@0.1`. Must be listed in `snapshot.packs` |
 | `check` | The check id, in kebab-case |
 | `card` | The card id, or `null` for a roster-wide check |
@@ -346,7 +347,7 @@ An unknown is a part of a definition the scan couldn't see.
 | `detail` | Text, or `null` |
 | `evidence` | A list of at least one evidence item: where it points (for example, the line that reads the prompt from the database) |
 
-Unknowns are sorted by `card`, then `field`. The field on the card stays `null`, the matching
+Unknowns are sorted by `card`, then `field`. The field on the card stays `null` (or `[]` for a list field), the matching
 check results in `findings.json` are `unknown`, and the card's confidence goes down.
 
 ### 4.3 Summary

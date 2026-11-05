@@ -29,7 +29,7 @@ export function runValidatorCli(files, validate, usage) {
     }
     let doc;
     try {
-      doc = JSON.parse(text.replace(/^﻿/, ""));
+      doc = JSON.parse(text.replace(/^\uFEFF/, ""));
     } catch (err) {
       console.error(`not valid JSON: ${file} (${err.message})`);
       code = 2;

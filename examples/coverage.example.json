@@ -67,6 +67,21 @@
       "note": null
     },
     {
+      "file": "prompts/ops-orchestrator.md",
+      "line": null,
+      "signals": [
+        "prompt-file"
+      ],
+      "detail": "Instructions for the Claude Code main agent",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "ops-orchestrator"
+      ],
+      "note": null
+    },
+    {
       "file": "services/ops/legacy_runner.rb",
       "line": 12,
       "signals": [
@@ -91,22 +106,6 @@
       "outcome": "no-agent",
       "cards": [],
       "note": "Imports the SDK but never calls it."
-    },
-    {
-      "file": "services/ops/orchestrator.py",
-      "line": 3,
-      "signals": [
-        "llm-import",
-        "llm-call"
-      ],
-      "detail": "imports anthropic and calls the messages API",
-      "status": "read",
-      "reason": null,
-      "outcome": "cards",
-      "cards": [
-        "ops-orchestrator"
-      ],
-      "note": null
     }
   ],
   "unknowns": [

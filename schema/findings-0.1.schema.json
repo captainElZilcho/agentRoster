@@ -67,7 +67,7 @@
     },
     "path": {
       "type": "string",
-      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*\\\\)(?!(?:.*/)?\\.\\.(?:/|$)).+$",
+      "pattern": "^(?![/\\\\~])(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!(?:.*/)?\\.\\.(?:/|$)).+$",
       "x-error": "must be a repo-relative path with forward slashes"
     },
     "snapshot": {
@@ -95,7 +95,7 @@
             "x-error": "use null for an empty value, not the text \"none\""
           },
           "pattern": "^[^/\\\\]+$",
-          "x-error": "must be a project name, not a path"
+          "x-error": "must be a project name: non-empty text, not a path"
         },
         "standard": {
           "type": "string",

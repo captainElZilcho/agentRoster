@@ -44,8 +44,8 @@ for (const name of files) {
 
 test("path pattern accepts repo-relative paths and rejects the rest", () => {
   const pathSchema = { $ref: "#/$defs/path", $defs: schema.$defs };
-  const ok = ["src/agent.py", ".claude/agents/x.md", "a/..b.py"];
-  const bad = ["src\\agent.py", "/abs/x.py", "C:/x.py", "../x.py", "a/../b.py"];
+  const ok = ["src/agent.py", ".claude/agents/x.md", "a/..b.py", "src/a:b.py"];
+  const bad = ["src\\agent.py", "/abs/x.py", "C:/x.py", "../x.py", "a/../b.py", "~/Documents/x.py", "file:///x", "https://x/y"];
   const v = new Ajv2020({ strict: true, allowUnionTypes: true }).addKeyword("x-error").compile({ $ref: "#/$defs/path", $defs: schema.$defs });
   for (const p of ok) { assert.equal(v(p), true, p); assert.deepEqual(checkSchema(pathSchema, p), [], p); }
   for (const p of bad) { assert.equal(v(p), false, p); assert.notDeepEqual(checkSchema(pathSchema, p), [], p); }

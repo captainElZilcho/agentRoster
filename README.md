@@ -1,6 +1,6 @@
 # AgentRoster
 
-**Status:** standard v0.2, findings and coverage formats v0.1, and their validators; the skill is not built yet · **Licence:** Apache-2.0
+**Status:** standard v0.2 and findings and coverage formats v0.1 (drafts), and their validators; the skill is not built yet · **Licence:** Apache-2.0
 
 AgentRoster will be a tool you add to a project. It is meant to read the code, map every agent and
 every workflow that calls a model, write a standard **roster card** for each, and **assess** how
