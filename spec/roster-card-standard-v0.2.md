@@ -79,8 +79,8 @@ The order is a writing rule for people and tools that write cards. Validation do
 | `purpose` | One sentence: what it is for | Answers "what's running and what's wrong" from the ops hub's data |
 | `engine` | Model and effort | `claude-haiku-5-5`, effort low |
 | `runtime` | Where and how it runs | Claude Code subagent; Python service; Agent SDK; scheduled job |
-| `autonomy` | L0–L3 (section 5) | L3 |
-| `status` | `active`, `new`, `broken`, `retired`, `external` | `active` |
+| `autonomy` | L0–L3 (section 5), or `null` (not known) | L3 |
+| `status` | `active`, `new`, `broken`, `retired`, `external`, or `null` (not known) | `active` |
 | `definition` | Definition score 1–5 with confidence, set by an assessment (section 3b) | Definition 4/5 |
 | `ratings` | Eight ratings, 0–99, plus overall (section 3) | ACC 88 · CON 81 … OVR 84 |
 | `headline_stats` | Three stat names to show from real use (section 4) | 412 runs · 96% accepted · $0.04/run |
@@ -334,7 +334,7 @@ vendor.
 
 **Portable**
 - **Plain files.** A card is one JSON file. YAML may return later as a second way to write the
-  same data. A **card bundle** is a folder: `roster.json` plus optional `icon.png`, `instructions.md` and referenced skill folders,
+  same data. A **card bundle** is a folder: `<id>.roster.json` plus optional `icon.png`, `instructions.md` and referenced skill folders,
   so a card can be copied, zipped, shared or published.
 - **Published schema.** A JSON Schema per standard version (`"roster": "0.2"`) so any tool can validate
   a card.
@@ -355,7 +355,7 @@ vendor.
   "extensions": {
     "org.example.opshub/v1": {
       "inventory_app": "billing-service",
-      "health_url": "http://127.0.0.1:8003/health"
+      "health_url": "https://ops.example.com/health"
     },
     "io.example.finance/v2": {
       "max_trade_usd": 0
@@ -407,6 +407,7 @@ card, A2A Agent Card, Claude Code subagent file) are generated from it. Examples
 
 The template below has every field in the fixed order (section 2), with `null` and `[]` for
 empty values. `stats` and `definition` are `null` until a runtime or an assessment fills them.
+`roster.json` holds a JSON array of cards; its format is defined in a later version, and `validate-card` checks single card files.
 
 ```json
 {
@@ -421,7 +422,7 @@ empty values. `stats` and `definition` are `null` until a runtime or an assessme
   "purpose": null,
   "engine": {"model": null, "effort": null},
   "runtime": null,
-  "autonomy": "L1",
+  "autonomy": null,
   "version": "2026.1",
   "icon": null,
   "definition": null,
@@ -446,13 +447,13 @@ empty values. `stats` and `definition` are `null` until a runtime or an assessme
   "context": [],
   "memory": {"scope": null, "where": null, "retention": null},
   "guardrails": {
-    "permission": "read-only",
+    "permission": null,
     "needs_approval": [],
     "forbidden": [],
-    "data": "public",
+    "data": null,
     "limits": {"turns": null, "minutes": null, "usd": null}
   },
-  "io": {"in": ["text"], "out": ["text"], "report": null},
+  "io": {"in": [], "out": [], "report": null},
   "handoffs": {"from": [], "to": []},
   "org": {"reports_to": null, "group": null},
   "stats": null,
@@ -470,12 +471,12 @@ empty values. `stats` and `definition` are `null` until a runtime or an assessme
 |---|---|
 | `kind` | `agent`, `workflow` |
 | `type`, `secondary` | `orchestrator`, `assistant`, `researcher`, `builder`, `specialist`, `reviewer`, `gatekeeper`, `operator`, `monitor` (`secondary` can be `null`) |
-| `status` | `active`, `new`, `broken`, `retired`, `external` |
-| `autonomy` | `L0`, `L1`, `L2`, `L3` |
+| `status` | `active`, `new`, `broken`, `retired`, `external`, or `null` (not known) |
+| `autonomy` | `L0`, `L1`, `L2`, `L3`, or `null` (not known) |
 | `ratings.*` | `unrated`, `"~NN"` (an estimate), or `{value, test, date, tasks, tries}`; `overall` is `unrated` or an integer 0–99 |
 | `memory.scope` | `none` (remembers nothing), `run`, `project`, `local`, `user`, or `null` (not known) |
-| `guardrails.permission` | `read-only`, `comment`, `workspace-write`, `approve`, `notify`, `act-external` |
-| `guardrails.data` | `public`, `internal`, `confidential`, `secret` |
+| `guardrails.permission` | `read-only`, `comment`, `workspace-write`, `approve`, `notify`, `act-external`, or `null` (not known) |
+| `guardrails.data` | `public`, `internal`, `confidential`, `secret`, or `null` (not known) |
 | `definition.confidence` | `high`, `medium`, `low` |
 | `source.found_by`, `evidence[].found_by` | `script`, `agent`, `hand` |
 | `version` | A string matching `YYYY.N`, for example `"2026.1"` |

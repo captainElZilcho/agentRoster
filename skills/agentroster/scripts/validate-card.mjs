@@ -35,7 +35,7 @@ function main(files) {
     }
     let card;
     try {
-      card = JSON.parse(text.replace(/^﻿/, ""));
+      card = JSON.parse(text.replace(/^\uFEFF/, ""));
     } catch (err) {
       console.error(`not valid JSON: ${file} (${err.message})`);
       code = 2;

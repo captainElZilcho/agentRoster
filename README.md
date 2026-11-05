@@ -51,7 +51,7 @@ JSON Schema: [`schema/roster-card-0.2.schema.json`](schema/roster-card-0.2.schem
 Examples: [`examples/`](examples/)
 
 AgentRoster is not affiliated with the A2A protocol; A2A's "Agent Card" is a different document,
-and roster cards can export to it.
+and roster cards can be mapped to it.
 
 ## Check a card
 

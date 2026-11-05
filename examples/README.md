@@ -31,16 +31,15 @@ Front (in the grid):
 │ haiku-5-5 · unattended (L3) · v2026.1      │
 ├────────────────────────────────────────────┤
 │ OVR  —  unrated (estimates only)           │
-│ ACC ~85  CON ~80  TOOL ~90  PLAN ~55       │
-│ DISC ~90 COMM ~85 SPD ~95   EFF ~95        │
+│ Definition — not assessed yet              │
 ├────────────────────────────────────────────┤
 │ 0 runs · — accepted · — per run            │
 └────────────────────────────────────────────┘
 ```
 
-Back (flip or open): the full spec in the standard's fixed order (role, goals, persona,
-instructions, skills, tools, context, memory, guardrails, inputs and outputs, handoffs, stats,
-source, provenance).
+Back (flip or open): the full spec in the standard's fixed order (kind, definition, role, goals,
+persona, instructions, skills, tools, context, memory, guardrails, inputs and outputs, handoffs,
+org, stats, source, evidence, provenance, profiles).
 
 A measured card would show its overall and band in place of the `—`, for example
 `OVR 86 · Strong`.
