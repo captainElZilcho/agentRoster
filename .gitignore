@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+.env
+.env.*
+# generated reports
+out/
+CLAUDE.local.md
+.claude/settings.local.json
+# private working material (maintainer only)
+.local/

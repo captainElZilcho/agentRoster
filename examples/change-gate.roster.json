@@ -1,0 +1,133 @@
+{
+  "roster": "0.1",
+  "id": "change-gate",
+  "name": "Change Gate",
+  "app": "Ops Hub",
+  "type": "gatekeeper",
+  "secondary": "none",
+  "purpose": "Approves or blocks any action that leaves the workspace (container restarts, pushes, messages) against the hub's rules.",
+  "engine": {
+    "model": "claude-opus-5-5",
+    "effort": "high"
+  },
+  "runtime": "Claude Code subagent",
+  "autonomy": "L3",
+  "status": "New",
+  "version": "2026.1",
+  "icon": "🛡️",
+  "ratings": {
+    "ACC": "~90",
+    "CON": "~88",
+    "TOOL": "~70",
+    "PLAN": "unrated",
+    "DISC": "~95",
+    "COMM": "~85",
+    "SPD": "unrated",
+    "EFF": "unrated",
+    "overall": "unrated"
+  },
+  "role": "Reads the proposed action, the requester's card and the rules; returns approve, block or ask-the-user with the rule it applied. Produces no work.",
+  "goals": [
+    "Never let a forbidden action through",
+    "Send anything the rules mark \"ask first\" to the user, every time",
+    "Give the rule behind every decision"
+  ],
+  "persona": "none",
+  "instructions": "prompts/change-gate.md",
+  "skills": [
+    {
+      "name": "policy-check",
+      "tag": "security_privacy/policy_enforcement"
+    }
+  ],
+  "tools": {
+    "allow": [
+      "Read",
+      "mcp__opshub__fleet"
+    ],
+    "deny": [
+      "Bash",
+      "Write",
+      "Edit"
+    ],
+    "mcp": [
+      "opshub"
+    ]
+  },
+  "context": [
+    "CLAUDE.md"
+  ],
+  "memory": {
+    "scope": "none",
+    "where": "none",
+    "retention": "none"
+  },
+  "guardrails": {
+    "permission": "approve",
+    "needs_approval": [],
+    "forbidden": [
+      "approve output from its own card",
+      "approve container actions without the user",
+      "approve commits or pushes without the user"
+    ],
+    "data": "internal",
+    "limits": {
+      "turns": 4,
+      "minutes": 1,
+      "usd": 0.1
+    }
+  },
+  "headline_stats": [
+    "runs",
+    "accepted_rate",
+    "cost_per_run"
+  ],
+  "io": {
+    "in": [
+      "json"
+    ],
+    "out": [
+      "json"
+    ],
+    "report": "{decision: approve|block|ask_user, rule, reason}"
+  },
+  "handoffs": {
+    "from": [
+      "orchestrator",
+      "operator",
+      "builder"
+    ],
+    "to": [
+      "orchestrator"
+    ]
+  },
+  "org": {
+    "reports_to": "ops-orchestrator",
+    "group": "safety"
+  },
+  "stats": {
+    "runs": 0,
+    "accepted": 0,
+    "reworked": 0,
+    "handoffs": 0,
+    "blocked": 0,
+    "caught": "none",
+    "median_time": "none",
+    "cost_per_run": "none",
+    "last_run": "none"
+  },
+  "source": "none (example; not yet defined anywhere)",
+  "provenance": {
+    "author": "AgentRoster examples",
+    "created": "2026-11-01",
+    "changed": "2026-11-01",
+    "license": "none",
+    "signature": "none"
+  },
+  "profiles": [],
+  "extensions": {
+    "org.example.opshub/v1": {
+      "inventory_app": "ops-hub"
+    }
+  }
+}
