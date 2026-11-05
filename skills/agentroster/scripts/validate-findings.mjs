@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { checkSchema } from "./lib/schema-check.mjs";
 import { runValidatorCli, isEntryPoint } from "./lib/cli.mjs";
-import { compareText, canonicalJson } from "./lib/order.mjs";
+import { compareText, canonicalJson, keySortedJson } from "./lib/order.mjs";
 
 const schema = JSON.parse(
   readFileSync(new URL("../schema/findings-0.1.schema.json", import.meta.url), "utf8"),
@@ -53,15 +53,6 @@ function compareEntries(a, b) {
     if (c !== 0) return c;
   }
   return compareText(a.id, b.id);
-}
-
-/** JSON text with object keys sorted (array order kept), so key order never matters. */
-function keySortedJson(v) {
-  if (Array.isArray(v)) return `[${v.map(keySortedJson).join(",")}]`;
-  if (v !== null && typeof v === "object") {
-    return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${keySortedJson(v[k])}`).join(",")}}`;
-  }
-  return JSON.stringify(v);
 }
 
 /** The summary the entries imply (spec 3.5). */

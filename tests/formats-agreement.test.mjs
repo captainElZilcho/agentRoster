@@ -56,3 +56,41 @@ for (const c of invalidCases) {
     assert.equal(ajvValidate(c.doc), !c.schemaOnly, JSON.stringify(ajvValidate.errors));
   });
 }
+
+// Coverage
+
+import { invalidCases as coverageInvalidCases } from "./fixtures/coverage/invalid-cases.mjs";
+
+const covPublished = new URL("../schema/coverage-0.1.schema.json", import.meta.url);
+const covShipped = new URL("../skills/agentroster/schema/coverage-0.1.schema.json", import.meta.url);
+const covValidDir = new URL("./fixtures/coverage/valid/", import.meta.url);
+const covSchema = readJson(covPublished);
+
+test("shipped coverage schema copy is byte-identical to the published schema", () => {
+  assert.equal(readFileSync(covShipped, "utf8"), readFileSync(covPublished, "utf8"));
+});
+
+let covValidate;
+test("Ajv compiles the coverage schema in strict mode", () => {
+  covValidate = ajv.compile(covSchema);
+  assert.equal(typeof covValidate, "function");
+});
+
+const covFiles = readdirSync(covValidDir).filter((n) => n.endsWith(".json")).sort();
+test("there are exactly 2 valid coverage fixtures", () => {
+  assert.equal(covFiles.length, 2);
+});
+
+for (const name of covFiles) {
+  test(`valid coverage fixture ${name}: checker and Ajv both accept it`, () => {
+    const doc = readJson(new URL(name, covValidDir));
+    assert.deepEqual(checkSchema(covSchema, doc), []);
+    assert.equal(covValidate(doc), true, JSON.stringify(covValidate.errors));
+  });
+}
+
+for (const c of coverageInvalidCases) {
+  test(`invalid coverage case ${c.name}: Ajv ${c.schemaOnly ? "rejects" : "accepts"} it`, () => {
+    assert.equal(covValidate(c.doc), !c.schemaOnly, JSON.stringify(covValidate.errors));
+  });
+}

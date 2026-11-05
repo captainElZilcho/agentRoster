@@ -18,3 +18,16 @@ export function compareText(a, b) {
 export function canonicalJson(value) {
   return JSON.stringify(value);
 }
+
+/**
+ * JSON text with object keys sorted (array order kept), so key order never matters.
+ * @param {unknown} v
+ * @returns {string}
+ */
+export function keySortedJson(v) {
+  if (Array.isArray(v)) return `[${v.map(keySortedJson).join(",")}]`;
+  if (v !== null && typeof v === "object") {
+    return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${keySortedJson(v[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(v);
+}

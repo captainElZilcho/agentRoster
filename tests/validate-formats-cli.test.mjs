@@ -93,3 +93,78 @@ test("findings: running through a symlink still validates", () => {
     assert.equal(run([bad], link).status, 1);
   });
 });
+
+// validate-coverage
+
+const covScript = "skills/agentroster/scripts/validate-coverage.mjs";
+const covGood = "tests/fixtures/coverage/valid/typical.json";
+
+const covBadDoc = () => {
+  const doc = JSON.parse(fs.readFileSync(covGood, "utf8"));
+  doc.candidates[0].reason = "Looked odd.";
+  return doc;
+};
+
+test("coverage: a valid file prints ok and exits 0", () => {
+  const r = run([covGood], covScript);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, `ok ${covGood}\n`);
+});
+
+test("coverage: valid and invalid files exit 1 with ok, fail and the error", () => {
+  withTempDir((dir) => {
+    const bad = path.join(dir, "bad.json");
+    fs.writeFileSync(bad, JSON.stringify(covBadDoc()));
+    const r = run([covGood, bad], covScript);
+    assert.equal(r.status, 1);
+    const lines = r.stdout.split("\n");
+    assert.equal(lines[0], `ok ${covGood}`);
+    assert.equal(lines[1], `fail ${bad}`);
+    assert.match(lines[2], /^ {2}\/candidates\/0\/reason: must be null when status is "read"$/);
+  });
+});
+
+test("coverage: a missing file exits 2", () => {
+  const r = run(["no-such-file.json"], covScript);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /^cannot read no-such-file\.json: ENOENT\n/);
+});
+
+test("coverage: invalid JSON exits 2", () => {
+  withTempDir((dir) => {
+    const f = path.join(dir, "broken.json");
+    fs.writeFileSync(f, "{ nope");
+    const r = run([f], covScript);
+    assert.equal(r.status, 2);
+    assert.ok(r.stderr.startsWith(`not valid JSON: ${f}`));
+  });
+});
+
+test("coverage: no arguments print usage and exit 2", () => {
+  const r = run([], covScript);
+  assert.equal(r.status, 2);
+  assert.equal(r.stderr, "usage: validate-coverage.mjs <coverage.json> [...]\n");
+});
+
+test("coverage: a file with a BOM passes", () => {
+  withTempDir((dir) => {
+    const f = path.join(dir, "bom.json");
+    fs.writeFileSync(f, "﻿" + fs.readFileSync(covGood, "utf8"));
+    const r = run([f], covScript);
+    assert.equal(r.status, 0);
+    assert.equal(r.stdout, `ok ${f}\n`);
+  });
+});
+
+test("coverage: running through a symlink still validates", () => {
+  withTempDir((dir) => {
+    const link = path.join(dir, "link.mjs");
+    fs.symlinkSync(path.resolve(covScript), link);
+    const ok = run([covGood], link);
+    assert.equal(ok.status, 0);
+    assert.equal(ok.stdout, `ok ${covGood}\n`);
+    const bad = path.join(dir, "bad.json");
+    fs.writeFileSync(bad, JSON.stringify(covBadDoc()));
+    assert.equal(run([bad], link).status, 1);
+  });
+});
