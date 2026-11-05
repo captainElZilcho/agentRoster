@@ -1,10 +1,12 @@
 {
-  "roster": "0.1",
+  "roster": "0.2",
   "id": "change-gate",
   "name": "Change Gate",
+  "kind": "agent",
   "app": "Ops Hub",
   "type": "gatekeeper",
-  "secondary": "none",
+  "secondary": null,
+  "status": "new",
   "purpose": "Approves or blocks any action that leaves the workspace (container restarts, pushes, messages) against the hub's rules.",
   "engine": {
     "model": "claude-opus-5-5",
@@ -12,9 +14,9 @@
   },
   "runtime": "Claude Code subagent",
   "autonomy": "L3",
-  "status": "New",
   "version": "2026.1",
   "icon": "🛡️",
+  "definition": null,
   "ratings": {
     "ACC": "~90",
     "CON": "~88",
@@ -26,13 +28,18 @@
     "EFF": "unrated",
     "overall": "unrated"
   },
+  "headline_stats": [
+    "runs",
+    "accepted_rate",
+    "cost_per_run"
+  ],
   "role": "Reads the proposed action, the requester's card and the rules; returns approve, block or ask-the-user with the rule it applied. Produces no work.",
   "goals": [
     "Never let a forbidden action through",
     "Send anything the rules mark \"ask first\" to the user, every time",
     "Give the rule behind every decision"
   ],
-  "persona": "none",
+  "persona": null,
   "instructions": "prompts/change-gate.md",
   "skills": [
     {
@@ -59,8 +66,8 @@
   ],
   "memory": {
     "scope": "none",
-    "where": "none",
-    "retention": "none"
+    "where": null,
+    "retention": null
   },
   "guardrails": {
     "permission": "approve",
@@ -77,11 +84,6 @@
       "usd": 0.1
     }
   },
-  "headline_stats": [
-    "runs",
-    "accepted_rate",
-    "cost_per_run"
-  ],
   "io": {
     "in": [
       "json"
@@ -93,36 +95,38 @@
   },
   "handoffs": {
     "from": [
-      "orchestrator",
-      "operator",
-      "builder"
+      {
+        "type": "orchestrator"
+      },
+      {
+        "type": "operator"
+      },
+      {
+        "type": "builder"
+      }
     ],
     "to": [
-      "orchestrator"
+      {
+        "type": "orchestrator"
+      }
     ]
   },
   "org": {
     "reports_to": "ops-orchestrator",
     "group": "safety"
   },
-  "stats": {
-    "runs": 0,
-    "accepted": 0,
-    "reworked": 0,
-    "handoffs": 0,
-    "blocked": 0,
-    "caught": "none",
-    "median_time": "none",
-    "cost_per_run": "none",
-    "last_run": "none"
+  "stats": null,
+  "source": {
+    "files": [],
+    "found_by": "hand"
   },
-  "source": "none (example; not yet defined anywhere)",
+  "evidence": {},
   "provenance": {
     "author": "AgentRoster examples",
     "created": "2026-11-01",
     "changed": "2026-11-01",
-    "license": "none",
-    "signature": "none"
+    "license": null,
+    "signature": null
   },
   "profiles": [],
   "extensions": {

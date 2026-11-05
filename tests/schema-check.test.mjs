@@ -192,3 +192,33 @@ test("formatErrors", () => {
   assert.equal(text, "  /a: one\n  /: two");
   assert.equal(formatErrors([]), "");
 });
+
+test("anyOf: one applicable branch reports its own errors, not the node x-error", () => {
+  const schema = {
+    anyOf: [
+      { const: "unrated" },
+      { type: "object", properties: { value: { type: "integer", maximum: 99 } }, required: ["value"] },
+    ],
+    "x-error": "must be unrated or measured",
+  };
+  one(schema, { value: 120 }, "/value", "120 is above the maximum 99");
+});
+
+test("oneOf: one applicable branch reports its own errors, not the node x-error", () => {
+  const schema = {
+    oneOf: [
+      { type: "object", properties: { card: { type: "string", minLength: 3 } }, required: ["card"] },
+      { type: "object", properties: { type: { type: "string" } }, required: ["type"] },
+    ],
+    "x-error": "must have exactly one key",
+  };
+  one(schema, { card: "ab" }, "/card", "must have at least 3 characters");
+});
+
+test("anyOf: two applicable branches fall back to the node x-error", () => {
+  const schema = {
+    anyOf: [{ type: "string", pattern: "^a" }, { type: "string", pattern: "^b" }],
+    "x-error": "must start with a or b",
+  };
+  one(schema, "c", "/", "must start with a or b");
+});

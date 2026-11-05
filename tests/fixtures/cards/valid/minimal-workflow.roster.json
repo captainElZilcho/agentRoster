@@ -1,0 +1,92 @@
+{
+  "roster": "0.2",
+  "id": "summarise-flow",
+  "name": "Summarise Flow",
+  "kind": "workflow",
+  "app": null,
+  "type": "builder",
+  "secondary": null,
+  "status": null,
+  "purpose": null,
+  "engine": {
+    "model": null,
+    "effort": null
+  },
+  "runtime": null,
+  "autonomy": null,
+  "version": null,
+  "icon": null,
+  "definition": null,
+  "ratings": {
+    "ACC": "unrated",
+    "CON": "unrated",
+    "TOOL": "unrated",
+    "PLAN": "unrated",
+    "DISC": "unrated",
+    "COMM": "unrated",
+    "SPD": "unrated",
+    "EFF": "unrated",
+    "overall": "unrated"
+  },
+  "headline_stats": [],
+  "role": null,
+  "goals": [],
+  "persona": null,
+  "instructions": null,
+  "skills": [],
+  "tools": {
+    "allow": [],
+    "deny": [],
+    "mcp": []
+  },
+  "context": [],
+  "memory": {
+    "scope": null,
+    "where": null,
+    "retention": null
+  },
+  "guardrails": {
+    "permission": null,
+    "needs_approval": [],
+    "forbidden": [],
+    "data": null,
+    "limits": {
+      "turns": null,
+      "minutes": null,
+      "usd": null
+    }
+  },
+  "io": {
+    "in": [],
+    "out": [],
+    "report": null
+  },
+  "handoffs": {
+    "from": [],
+    "to": []
+  },
+  "org": {
+    "reports_to": null,
+    "group": null
+  },
+  "stats": null,
+  "source": {
+    "files": [
+      {
+        "path": "app/summarise.py",
+        "line": 12
+      }
+    ],
+    "found_by": "script"
+  },
+  "evidence": {},
+  "provenance": {
+    "author": null,
+    "created": null,
+    "changed": null,
+    "license": null,
+    "signature": null
+  },
+  "profiles": [],
+  "extensions": {}
+}

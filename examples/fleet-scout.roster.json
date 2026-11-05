@@ -1,10 +1,12 @@
 {
-  "roster": "0.1",
+  "roster": "0.2",
   "id": "fleet-scout",
   "name": "Fleet Scout",
+  "kind": "agent",
   "app": "Ops Hub",
   "type": "researcher",
-  "secondary": "none",
+  "secondary": null,
+  "status": "new",
   "purpose": "Answers \"what's running, what's wrong, and since when\" from the ops hub's fleet data.",
   "engine": {
     "model": "claude-haiku-5-5",
@@ -12,9 +14,9 @@
   },
   "runtime": "Claude Code subagent over the hub's MCP server",
   "autonomy": "L3",
-  "status": "New",
   "version": "2026.1",
   "icon": "🔭",
+  "definition": null,
   "ratings": {
     "ACC": "~85",
     "CON": "~80",
@@ -26,6 +28,11 @@
     "EFF": "~95",
     "overall": "unrated"
   },
+  "headline_stats": [
+    "runs",
+    "accepted_rate",
+    "cost_per_run"
+  ],
   "role": "Reads fleet state, ports and events through the hub's MCP server and reports them plainly. Never operates containers.",
   "goals": [
     "Correct state words and reasons for every app asked about",
@@ -66,8 +73,8 @@
   ],
   "memory": {
     "scope": "none",
-    "where": "none",
-    "retention": "none"
+    "where": null,
+    "retention": null
   },
   "guardrails": {
     "permission": "read-only",
@@ -84,11 +91,6 @@
       "usd": 0.05
     }
   },
-  "headline_stats": [
-    "runs",
-    "accepted_rate",
-    "cost_per_run"
-  ],
   "io": {
     "in": [
       "text"
@@ -100,36 +102,38 @@
   },
   "handoffs": {
     "from": [
-      "orchestrator",
-      "assistant"
+      {
+        "type": "orchestrator"
+      },
+      {
+        "type": "assistant"
+      }
     ],
     "to": [
-      "orchestrator",
-      "operator"
+      {
+        "type": "orchestrator"
+      },
+      {
+        "type": "operator"
+      }
     ]
   },
   "org": {
     "reports_to": "ops-orchestrator",
     "group": "operations"
   },
-  "stats": {
-    "runs": 0,
-    "accepted": 0,
-    "reworked": 0,
-    "handoffs": 0,
-    "blocked": 0,
-    "caught": "none",
-    "median_time": "none",
-    "cost_per_run": "none",
-    "last_run": "none"
+  "stats": null,
+  "source": {
+    "files": [],
+    "found_by": "hand"
   },
-  "source": "none (example; not yet defined anywhere)",
+  "evidence": {},
   "provenance": {
     "author": "AgentRoster examples",
     "created": "2026-11-01",
     "changed": "2026-11-01",
-    "license": "none",
-    "signature": "none"
+    "license": null,
+    "signature": null
   },
   "profiles": [],
   "extensions": {

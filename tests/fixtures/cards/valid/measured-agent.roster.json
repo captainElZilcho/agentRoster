@@ -1,0 +1,190 @@
+{
+  "roster": "0.2",
+  "id": "report-researcher",
+  "name": "Report Researcher",
+  "kind": "agent",
+  "app": "Example App",
+  "type": "researcher",
+  "secondary": "assistant",
+  "status": "active",
+  "purpose": "Finds and summarises sources for a report.",
+  "engine": {
+    "model": "example-model-1",
+    "effort": "medium"
+  },
+  "runtime": "Agent SDK",
+  "autonomy": "L2",
+  "version": "2026.2",
+  "icon": "R",
+  "definition": {
+    "score": 4,
+    "confidence": "medium",
+    "areas": {
+      "completeness": 4,
+      "depth": 4,
+      "fit": 5,
+      "least_agency": null
+    },
+    "run": "assessment-run-1",
+    "packs": [
+      "assess-definition@0.1"
+    ]
+  },
+  "ratings": {
+    "ACC": {
+      "value": 88,
+      "test": "researcher-set-1",
+      "date": "2026-10-01",
+      "tasks": 40,
+      "tries": 3
+    },
+    "CON": "~80",
+    "TOOL": "unrated",
+    "PLAN": "unrated",
+    "DISC": "unrated",
+    "COMM": "unrated",
+    "SPD": "unrated",
+    "EFF": "unrated",
+    "overall": 84
+  },
+  "headline_stats": [
+    "runs",
+    "accepted_rate",
+    "cost_per_run"
+  ],
+  "role": "Finds sources and summarises them. Does not write the final report.",
+  "goals": [
+    "Cite a source for every claim",
+    "Stay within the budget"
+  ],
+  "persona": "Plain and brief.",
+  "instructions": "prompts/report-researcher.md",
+  "skills": [
+    {
+      "name": "web-research",
+      "tag": "retrieval/search"
+    },
+    {
+      "name": "note-taking",
+      "tag": null
+    }
+  ],
+  "tools": {
+    "allow": [
+      "Read",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash"
+    ],
+    "mcp": [
+      "docs-server"
+    ]
+  },
+  "context": [
+    "AGENTS.md"
+  ],
+  "memory": {
+    "scope": "project",
+    "where": ".agent-memory/report-researcher/",
+    "retention": "30d"
+  },
+  "guardrails": {
+    "permission": "read-only",
+    "needs_approval": [
+      "opening a paid source"
+    ],
+    "forbidden": [
+      "write files"
+    ],
+    "data": "internal",
+    "limits": {
+      "turns": 20,
+      "minutes": 10,
+      "usd": 0.5
+    }
+  },
+  "io": {
+    "in": [
+      "text"
+    ],
+    "out": [
+      "text",
+      "json"
+    ],
+    "report": "sources with one line each"
+  },
+  "handoffs": {
+    "from": [
+      {
+        "card": "lead-orchestrator"
+      }
+    ],
+    "to": [
+      {
+        "type": "reviewer"
+      },
+      {
+        "person": "editor"
+      }
+    ]
+  },
+  "org": {
+    "reports_to": "lead-orchestrator",
+    "group": "research"
+  },
+  "stats": {
+    "source": "example-runtime",
+    "as_of": "2026-10-31",
+    "runs": 412,
+    "accepted": 395,
+    "reworked": 12,
+    "handoffs": 380,
+    "blocked": 2,
+    "caught": null,
+    "median_time": 41.5,
+    "cost_per_run": 0.04,
+    "last_run": "2026-10-30T14:05:00Z"
+  },
+  "source": {
+    "files": [
+      {
+        "path": "agents/report-researcher.md",
+        "line": null
+      }
+    ],
+    "found_by": "agent"
+  },
+  "evidence": {
+    "guardrails.permission": [
+      {
+        "file": "agents/report-researcher.md",
+        "line": 7,
+        "quote": "tools: Read, WebSearch",
+        "found_by": "agent"
+      }
+    ]
+  },
+  "provenance": {
+    "author": "Example Team",
+    "created": "2026-09-01",
+    "changed": "2026-10-01",
+    "license": "Apache-2.0",
+    "signature": null
+  },
+  "profiles": [
+    "claude-code"
+  ],
+  "extensions": {
+    "https://example.org/ext/v1": {
+      "note": "any JSON"
+    },
+    "org.example.app/v1": {
+      "tags": [
+        "a",
+        "b"
+      ],
+      "n": 1
+    }
+  }
+}

@@ -1,0 +1,893 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/captainElZilcho/agentRoster/main/schema/roster-card-0.2.schema.json",
+  "title": "AgentRoster roster card v0.2",
+  "description": "One roster card: a standard description of an agent or workflow.",
+  "type": "object",
+  "properties": {
+    "roster": {
+      "const": "0.2",
+      "x-error": "must be the string \"0.2\""
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "$ref": "#/$defs/text"
+    },
+    "kind": {
+      "enum": [
+        "agent",
+        "workflow"
+      ]
+    },
+    "app": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "type": {
+      "$ref": "#/$defs/type"
+    },
+    "secondary": {
+      "enum": [
+        "orchestrator",
+        "assistant",
+        "researcher",
+        "builder",
+        "specialist",
+        "reviewer",
+        "gatekeeper",
+        "operator",
+        "monitor",
+        null
+      ]
+    },
+    "status": {
+      "enum": [
+        "active",
+        "new",
+        "broken",
+        "retired",
+        "external",
+        null
+      ]
+    },
+    "purpose": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "effort": {
+          "$ref": "#/$defs/textOrNull"
+        }
+      },
+      "required": [
+        "model",
+        "effort"
+      ],
+      "additionalProperties": false
+    },
+    "runtime": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "autonomy": {
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        null
+      ]
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]{4}\\.[0-9]+$",
+      "x-error": "must be a string like \"2026.1\""
+    },
+    "icon": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "definition": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "areas": {
+          "type": "object",
+          "properties": {
+            "completeness": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 5
+            },
+            "depth": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 5
+            },
+            "fit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 5
+            },
+            "least_agency": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "completeness",
+            "depth",
+            "fit",
+            "least_agency"
+          ],
+          "additionalProperties": false
+        },
+        "run": {
+          "$ref": "#/$defs/text"
+        },
+        "packs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+@[0-9]+\\.[0-9]+$"
+          }
+        }
+      },
+      "required": [
+        "score",
+        "confidence",
+        "areas",
+        "run",
+        "packs"
+      ],
+      "additionalProperties": false
+    },
+    "ratings": {
+      "type": "object",
+      "properties": {
+        "ACC": {
+          "$ref": "#/$defs/rating"
+        },
+        "CON": {
+          "$ref": "#/$defs/rating"
+        },
+        "TOOL": {
+          "$ref": "#/$defs/rating"
+        },
+        "PLAN": {
+          "$ref": "#/$defs/rating"
+        },
+        "DISC": {
+          "$ref": "#/$defs/rating"
+        },
+        "COMM": {
+          "$ref": "#/$defs/rating"
+        },
+        "SPD": {
+          "$ref": "#/$defs/rating"
+        },
+        "EFF": {
+          "$ref": "#/$defs/rating"
+        },
+        "overall": {
+          "anyOf": [
+            {
+              "const": "unrated"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 99
+            }
+          ],
+          "x-error": "must be \"unrated\" or a whole number 0–99"
+        }
+      },
+      "required": [
+        "ACC",
+        "CON",
+        "TOOL",
+        "PLAN",
+        "DISC",
+        "COMM",
+        "SPD",
+        "EFF",
+        "overall"
+      ],
+      "additionalProperties": false
+    },
+    "headline_stats": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "runs",
+          "accepted",
+          "accepted_rate",
+          "reworked",
+          "handoffs",
+          "blocked",
+          "caught",
+          "median_time",
+          "cost_per_run",
+          "last_run"
+        ]
+      },
+      "maxItems": 3,
+      "uniqueItems": true
+    },
+    "role": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      },
+      "maxItems": 5
+    },
+    "persona": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "instructions": {
+      "$ref": "#/$defs/textOrNull"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/text"
+          },
+          "tag": {
+            "$ref": "#/$defs/textOrNull"
+          }
+        },
+        "required": [
+          "name",
+          "tag"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tools": {
+      "type": "object",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "mcp": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      },
+      "required": [
+        "allow",
+        "deny",
+        "mcp"
+      ],
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "enum": [
+            "none",
+            "run",
+            "project",
+            "local",
+            "user",
+            null
+          ]
+        },
+        "where": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "retention": {
+          "$ref": "#/$defs/textOrNull"
+        }
+      },
+      "required": [
+        "scope",
+        "where",
+        "retention"
+      ],
+      "additionalProperties": false
+    },
+    "guardrails": {
+      "type": "object",
+      "properties": {
+        "permission": {
+          "enum": [
+            "read-only",
+            "comment",
+            "workspace-write",
+            "approve",
+            "notify",
+            "act-external",
+            null
+          ]
+        },
+        "needs_approval": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "forbidden": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "data": {
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "secret",
+            null
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "turns": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            },
+            "minutes": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "usd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "turns",
+            "minutes",
+            "usd"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "permission",
+        "needs_approval",
+        "forbidden",
+        "data",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    "io": {
+      "type": "object",
+      "properties": {
+        "in": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "out": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "report": {
+          "$ref": "#/$defs/textOrNull"
+        }
+      },
+      "required": [
+        "in",
+        "out",
+        "report"
+      ],
+      "additionalProperties": false
+    },
+    "handoffs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "org": {
+      "type": "object",
+      "properties": {
+        "reports_to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group": {
+          "$ref": "#/$defs/textOrNull"
+        }
+      },
+      "required": [
+        "reports_to",
+        "group"
+      ],
+      "additionalProperties": false
+    },
+    "stats": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/text"
+        },
+        "as_of": {
+          "$ref": "#/$defs/date"
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reworked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "handoffs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "caught": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "median_time": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cost_per_run": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "last_run": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T.+)?$"
+        }
+      },
+      "required": [
+        "source",
+        "as_of",
+        "runs",
+        "accepted",
+        "reworked",
+        "handoffs",
+        "blocked",
+        "caught",
+        "median_time",
+        "cost_per_run",
+        "last_run"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/text"
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              }
+            },
+            "required": [
+              "path",
+              "line"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "found_by": {
+          "enum": [
+            "script",
+            "agent",
+            "hand"
+          ]
+        }
+      },
+      "required": [
+        "files",
+        "found_by"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z_]+(\\.[A-Za-z_]+)*$",
+        "x-error": "must be a field path like \"guardrails.permission\""
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/evidenceItem"
+        },
+        "minItems": 1
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "created": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changed": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "signature": {
+          "$ref": "#/$defs/textOrNull"
+        }
+      },
+      "required": [
+        "author",
+        "created",
+        "changed",
+        "license",
+        "signature"
+      ],
+      "additionalProperties": false
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^([a-z0-9-]+(\\.[a-z0-9-]+)+/v[0-9]+|https?://\\S+)$",
+        "x-error": "extension keys need a namespace like \"org.example.app/v1\" or a URI"
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "roster",
+    "id",
+    "name",
+    "kind",
+    "app",
+    "type",
+    "secondary",
+    "status",
+    "purpose",
+    "engine",
+    "runtime",
+    "autonomy",
+    "version",
+    "icon",
+    "definition",
+    "ratings",
+    "headline_stats",
+    "role",
+    "goals",
+    "persona",
+    "instructions",
+    "skills",
+    "tools",
+    "context",
+    "memory",
+    "guardrails",
+    "io",
+    "handoffs",
+    "org",
+    "stats",
+    "source",
+    "evidence",
+    "provenance",
+    "profiles",
+    "extensions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "enum": [
+          "none",
+          "None",
+          "NONE"
+        ],
+        "x-error": "use null for an empty value, not the text \"none\""
+      }
+    },
+    "textOrNull": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "not": {
+        "enum": [
+          "none",
+          "None",
+          "NONE"
+        ],
+        "x-error": "use null for an empty value, not the text \"none\""
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "x-error": "must be a kebab-case id like \"fleet-scout\""
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "x-error": "must be a date like \"2026-11-04\""
+    },
+    "type": {
+      "enum": [
+        "orchestrator",
+        "assistant",
+        "researcher",
+        "builder",
+        "specialist",
+        "reviewer",
+        "gatekeeper",
+        "operator",
+        "monitor"
+      ]
+    },
+    "rating": {
+      "anyOf": [
+        {
+          "const": "unrated"
+        },
+        {
+          "type": "string",
+          "pattern": "^~[0-9]{1,2}$"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 99
+            },
+            "test": {
+              "$ref": "#/$defs/text"
+            },
+            "date": {
+              "$ref": "#/$defs/date"
+            },
+            "tasks": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tries": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "value",
+            "test",
+            "date",
+            "tasks",
+            "tries"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "x-error": "must be \"unrated\", an estimate like \"~75\", or a measured rating"
+    },
+    "link": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "card": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "card"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "person": {
+              "$ref": "#/$defs/text"
+            }
+          },
+          "required": [
+            "person"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "x-error": "must have exactly one of card, type or person"
+    },
+    "evidenceItem": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/text"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "quote": {
+          "$ref": "#/$defs/text"
+        },
+        "found_by": {
+          "enum": [
+            "script",
+            "agent",
+            "hand"
+          ]
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "quote",
+        "found_by"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

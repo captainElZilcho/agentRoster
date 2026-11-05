@@ -1,9 +1,10 @@
 # Example cards
 
-Three cards for agents a small ops hub could run. They show the format, not real agents: the ratings are
-estimates (`~`), so every card is **New** with no overall. They follow standard v0.1 (written
-as JSON since 2026-11-04) and will be updated to v0.2. The skill tags imitate OASF's
-`category/skill` style; real IDs get checked against the OASF taxonomy before v1.0.
+Three cards for agents a small ops hub could run. They show the format, not real agents: the
+ratings are estimates (`~`), so every card is **New** with no overall. They follow standard v0.2.
+`source.files` is empty because these agents are examples only; they are not defined anywhere.
+The skill tags imitate OASF's `category/skill` style; real IDs get checked against the OASF
+taxonomy before v1.0.
 
 Notes that JSON can't hold as comments:
 

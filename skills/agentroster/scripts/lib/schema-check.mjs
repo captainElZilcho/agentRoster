@@ -211,6 +211,8 @@ function validate(node, value, path, root) {
     add(isObject(node.not) && typeof node.not["x-error"] === "string" ? node.not["x-error"] : "is not allowed");
   }
 
+  const beforeBranches = errors.length;
+  let branchOnly = false;
   if (node.anyOf !== undefined || node.oneOf !== undefined) {
     for (const key of ["anyOf", "oneOf"]) {
       const branches = node[key];
@@ -221,12 +223,17 @@ function validate(node, value, path, root) {
         add("matches more than one allowed shape");
       } else if (passing === 0) {
         const applicable = results.filter((_, i) => isApplicable(branches[i], value, root));
-        if (applicable.length === 1) errors.push(...applicable[0]);
+        if (applicable.length === 1) {
+          errors.push(...applicable[0]);
+          branchOnly = true;
+        }
         else add(typeof node["x-error"] === "string" ? node["x-error"] : "does not match any allowed shape");
       }
     }
   }
 
+  // The one applicable branch explains the failure better than the node's x-error.
+  if (branchOnly && beforeBranches === 0) return errors;
   return annotate(node, errors, path);
 }
 
