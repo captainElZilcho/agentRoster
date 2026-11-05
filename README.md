@@ -6,6 +6,11 @@ AgentRoster will be a tool you add to a project. It is meant to read the code, m
 every workflow that calls a model, write a standard **roster card** for each, and **assess** how
 well each one is defined to do its job.
 
+Think of it as an inventory plus a configuration review, like auditing firewalls: what agents
+are there, what each one is set up to do, and whether that is enough, including what should be
+there but isn't. Each agent gets two parts: its **definition** (the card: what it is and what it
+can do) and its **result** (how well that definition holds up, check by check).
+
 It is meant to answer a question most teams can't: **do you actually have agents, or workflows
 that call a model?**
 
@@ -33,8 +38,10 @@ project ─► MAP ─► map.md ─► CARDS ─► roster.json ─► ASSESS �
    nothing invented, no secrets copied.
 3. **Assess**: will check packs for completeness, depth, fit and least agency. Each card will get
    a 1–5 definition score with a confidence; each finding will say what, why, impact and the fix.
+   What the scan couldn't see is marked unknown, never reported as missing or fine.
 4. **Report**: will write Markdown for agents and one offline HTML report for people, in a
-   git-ignored folder.
+   git-ignored folder: a dashboard of agent cards at the top, then the findings and
+   recommendations below.
 
 Everything a model writes will be checked by a fresh validator before it counts.
 

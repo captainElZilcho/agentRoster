@@ -10,8 +10,9 @@ project, writes a card for each, and assesses how well each one is defined.
    extensions, mappings).
 3. `CLAUDE.local.md` and `.local/` if present (maintainer only, git-ignored, never committed):
    the internal docs in `.local/docs/`, read in this order:
-   `roadmap.md` (done, **next step**, done-when) → `product-v0.2.md` (how it works) →
-   `decisions.md` (ADR-001 onward) → `research.md` (standards and sources).
+   `roadmap.md` (done, **next step**, done-when) → `product-v0.2.md` (how it works) → the
+   step's design (`design-stepN-*.md`) → `decisions.md` (ADR-001 onward) → `research.md`
+   (standards and sources).
 
 ## How the project works
 
@@ -29,6 +30,11 @@ AgentRoster has two parts that ship together:
    - **assess**: check packs → `findings.json` (what, why, impact, fix) and a 1–5 definition
      score with confidence;
    - **report**: `cards/<id>.md`, `assessment.md`, `assessment.html`.
+
+   A run is an inventory plus a configuration review: each agent has its **definition** (the
+   card) and its **result** (every check, passed or not). What the scan couldn't see is
+   `unknown`, never `fail` or `pass`. The HTML report is a dashboard of card tiles, then the
+   findings.
 
    Model-made output goes through a validation loop (a fresh validator checks it, up to three
    rounds). Scripts (Node.js 20+, no dependencies) do everything that needs no model: validate,
@@ -50,9 +56,10 @@ project names, secrets or the maintainer's notes? Then it is internal and goes i
 | Kind of file | Location | Public |
 |---|---|---|
 | Card standard (versioned drafts) | `spec/roster-card-standard-vX.Y.md` | yes |
-| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json` | yes |
+| Findings and coverage formats (versioned drafts) | `spec/findings-and-coverage-vX.Y.md` | yes |
+| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json`, `schema/coverage-X.Y.schema.json` | yes |
 | Example roster cards | `examples/*.roster.json` (generic agents only) | yes |
-| Product design and research | `.local/docs/` (`product-vX.Y.md`, `research.md`) | no (internal) |
+| Product design, step designs and research | `.local/docs/` (`product-vX.Y.md`, `design-stepN-<topic>.md`, `research.md`) | no (internal) |
 | Decisions | `.local/docs/decisions.md` (new ADR, never delete) | no (internal) |
 | Roadmap | `.local/docs/roadmap.md` | no (internal) |
 | Implementation plans | `.local/plans/YYYY-MM-DD-<topic>-plan.md` | no (internal) |
