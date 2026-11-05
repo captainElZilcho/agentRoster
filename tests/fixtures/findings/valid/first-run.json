@@ -1,0 +1,253 @@
+{
+  "findings": "0.1",
+  "snapshot": {
+    "id": "run-2026-11-05-1",
+    "taken_at": "2026-11-05T14:30:00Z",
+    "project": "ops-hub",
+    "standard": "0.2",
+    "packs": [
+      {
+        "id": "completeness",
+        "version": "0.1"
+      },
+      {
+        "id": "least-agency",
+        "version": "0.1"
+      },
+      {
+        "id": "orchestration",
+        "version": "0.1"
+      }
+    ],
+    "mode": "standard",
+    "previous": null
+  },
+  "summary": [
+    {
+      "card": null,
+      "counts": {
+        "fail": 0,
+        "concern": 0,
+        "unknown": 0,
+        "info": 1,
+        "pass": 0,
+        "not-applicable": 0
+      },
+      "worst": null,
+      "needs_checking": 0
+    },
+    {
+      "card": "change-gate",
+      "counts": {
+        "fail": 0,
+        "concern": 0,
+        "unknown": 0,
+        "info": 0,
+        "pass": 1,
+        "not-applicable": 1
+      },
+      "worst": null,
+      "needs_checking": 0
+    },
+    {
+      "card": "fleet-scout",
+      "counts": {
+        "fail": 1,
+        "concern": 0,
+        "unknown": 0,
+        "info": 0,
+        "pass": 0,
+        "not-applicable": 0
+      },
+      "worst": "high",
+      "needs_checking": 0
+    },
+    {
+      "card": "ops-orchestrator",
+      "counts": {
+        "fail": 0,
+        "concern": 1,
+        "unknown": 1,
+        "info": 0,
+        "pass": 0,
+        "not-applicable": 0
+      },
+      "worst": "medium",
+      "needs_checking": 1
+    }
+  ],
+  "entries": [
+    {
+      "kind": "agent",
+      "severity": "high",
+      "evidence": [
+        {
+          "file": ".claude/agents/fleet-scout.md",
+          "line": 4,
+          "quote": "tools: Read, Grep, Bash",
+          "found_by": "script"
+        }
+      ],
+      "what": "The agent file sets no limit on turns, time or spend.",
+      "why": "An agent that picks its own tools can loop for as long as it likes without a limit.",
+      "impact": "A confused run could keep calling tools and use up budget before anyone notices.",
+      "fix": "In .claude/agents/fleet-scout.md, add a turn limit to the front matter (from no limit to maxTurns: 20).",
+      "decide": null,
+      "enforcement": null,
+      "confidence": "high",
+      "validation": {
+        "status": "validated",
+        "rounds": 0
+      },
+      "method": "rule",
+      "change": null,
+      "id": "least-agency.turn-limit:fleet-scout",
+      "pack": "least-agency@0.1",
+      "check": "turn-limit",
+      "card": "fleet-scout",
+      "result": "fail"
+    },
+    {
+      "kind": "agent",
+      "severity": "medium",
+      "evidence": [
+        {
+          "file": "services/ops/orchestrator.py",
+          "line": 12,
+          "quote": "GOAL = \"keep things running\"",
+          "found_by": "agent"
+        }
+      ],
+      "what": "The goal is one vague phrase that does not say what done looks like.",
+      "why": "A goal with no end state gives the agent no way to know when to stop or hand off.",
+      "impact": "Runs may end early or drift, and a reviewer cannot tell which one happened.",
+      "fix": "In services/ops/orchestrator.py, replace GOAL (from \"keep things running\" to a sentence naming the outcome and the stop condition).",
+      "decide": null,
+      "enforcement": null,
+      "confidence": "medium",
+      "validation": {
+        "status": "validated",
+        "rounds": 1
+      },
+      "method": "judgement",
+      "change": null,
+      "id": "completeness.goals-defined:ops-orchestrator",
+      "pack": "completeness@0.1",
+      "check": "goals-defined",
+      "card": "ops-orchestrator",
+      "result": "concern"
+    },
+    {
+      "kind": "agent",
+      "severity": null,
+      "evidence": [
+        {
+          "file": "services/ops/orchestrator.py",
+          "line": 41,
+          "quote": "prompt = db.load_prompt(\"orchestrator\")",
+          "found_by": "agent"
+        }
+      ],
+      "what": "The instructions could not be read: the prompt is loaded from a database at run time.",
+      "why": "Without the prompt, the scan cannot say whether the role, limits and handoffs are stated.",
+      "impact": null,
+      "fix": null,
+      "decide": {
+        "question": "How should the orchestrator's instructions be reviewed?",
+        "options": [
+          "Export the stored prompt to a file in the repository and run the scan again",
+          "Leave it as it is and accept that these checks stay unknown"
+        ]
+      },
+      "enforcement": null,
+      "confidence": "low",
+      "validation": {
+        "status": "needs-checking",
+        "rounds": 3
+      },
+      "method": "judgement",
+      "change": null,
+      "id": "completeness.instructions-defined:ops-orchestrator",
+      "pack": "completeness@0.1",
+      "check": "instructions-defined",
+      "card": "ops-orchestrator",
+      "result": "unknown"
+    },
+    {
+      "kind": null,
+      "severity": "info",
+      "evidence": [],
+      "what": "The roster has 3 cards: 2 agents and 1 workflow.",
+      "why": "A small roster is easy to review by hand; the count is a baseline for later runs.",
+      "impact": null,
+      "fix": null,
+      "decide": null,
+      "enforcement": null,
+      "confidence": "high",
+      "validation": {
+        "status": "validated",
+        "rounds": 0
+      },
+      "method": "rule",
+      "change": null,
+      "id": "orchestration.agent-count:roster:all",
+      "pack": "orchestration@0.1",
+      "check": "agent-count",
+      "card": null,
+      "result": "info"
+    },
+    {
+      "kind": "workflow",
+      "severity": null,
+      "evidence": [
+        {
+          "file": ".claude/agents/change-gate.md",
+          "line": 6,
+          "quote": "You approve or block changes before they leave the workspace.",
+          "found_by": "script"
+        }
+      ],
+      "what": "The file states what the workflow does.",
+      "why": null,
+      "impact": null,
+      "fix": null,
+      "decide": null,
+      "enforcement": null,
+      "confidence": "high",
+      "validation": {
+        "status": "validated",
+        "rounds": 0
+      },
+      "method": "rule",
+      "change": null,
+      "id": "completeness.role-defined:change-gate",
+      "pack": "completeness@0.1",
+      "check": "role-defined",
+      "card": "change-gate",
+      "result": "pass"
+    },
+    {
+      "kind": "workflow",
+      "severity": null,
+      "evidence": [],
+      "what": "A workflow runs fixed steps, so a turn limit does not apply.",
+      "why": null,
+      "impact": null,
+      "fix": null,
+      "decide": null,
+      "enforcement": null,
+      "confidence": "high",
+      "validation": {
+        "status": "validated",
+        "rounds": 0
+      },
+      "method": "rule",
+      "change": null,
+      "id": "least-agency.turn-limit:change-gate",
+      "pack": "least-agency@0.1",
+      "check": "turn-limit",
+      "card": "change-gate",
+      "result": "not-applicable"
+    }
+  ]
+}

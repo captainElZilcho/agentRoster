@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/captainElZilcho/agentRoster/main/schema/findings-0.1.schema.json",
+  "title": "AgentRoster findings v0.1",
+  "description": "The result of every check that ran in one run: one entry per check and card, with a summary for the dashboard.",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "const": "0.1",
+      "x-error": "must be the string \"0.1\""
+    },
+    "snapshot": {
+      "$ref": "#/$defs/snapshot"
+    },
+    "summary": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/summaryItem"
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "required": [
+    "findings",
+    "snapshot",
+    "summary",
+    "entries"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "enum": [
+          "none",
+          "None",
+          "NONE"
+        ],
+        "x-error": "use null for an empty value, not the text \"none\""
+      }
+    },
+    "textOrNull": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "not": {
+        "enum": [
+          "none",
+          "None",
+          "NONE"
+        ],
+        "x-error": "use null for an empty value, not the text \"none\""
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "x-error": "must be a kebab-case id like \"fleet-scout\""
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*\\\\)(?!(?:.*/)?\\.\\.(?:/|$)).+$",
+      "x-error": "must be a repo-relative path with forward slashes"
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[1-9][0-9]*$",
+          "x-error": "must be a run id like \"run-2026-11-05-1\""
+        },
+        "taken_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "x-error": "must be a UTC time like \"2026-11-05T14:30:00Z\""
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "enum": [
+              "none",
+              "None",
+              "NONE"
+            ],
+            "x-error": "use null for an empty value, not the text \"none\""
+          },
+          "pattern": "^[^/\\\\]+$",
+          "x-error": "must be a project name, not a path"
+        },
+        "standard": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$"
+        },
+        "packs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^[0-9]+\\.[0-9]+$",
+                "x-error": "must be a version like \"0.1\""
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "mode": {
+          "enum": [
+            "standard",
+            "quick",
+            "thorough"
+          ]
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^run-[0-9]{4}-[0-9]{2}-[0-9]{2}-[1-9][0-9]*$",
+              "x-error": "must be a run id like \"run-2026-11-05-1\""
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "taken_at",
+        "project",
+        "standard",
+        "packs",
+        "mode",
+        "previous"
+      ],
+      "additionalProperties": false
+    },
+    "evidenceItem": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/path"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "quote": {
+          "$ref": "#/$defs/text"
+        },
+        "found_by": {
+          "enum": [
+            "script",
+            "agent",
+            "hand"
+          ]
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "quote",
+        "found_by"
+      ],
+      "additionalProperties": false
+    },
+    "entry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*\\.[a-z0-9]+(-[a-z0-9]+)*:(roster:.+|[a-z0-9]+(-[a-z0-9]+)*)$",
+          "x-error": "must be an entry id like \"least-agency.turn-limit:fleet-scout\""
+        },
+        "pack": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*@[0-9]+\\.[0-9]+$",
+          "x-error": "must be a pack like \"least-agency@0.1\""
+        },
+        "check": {
+          "$ref": "#/$defs/id"
+        },
+        "card": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "agent",
+            "workflow",
+            null
+          ]
+        },
+        "result": {
+          "enum": [
+            "pass",
+            "concern",
+            "fail",
+            "unknown",
+            "info",
+            "not-applicable"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "info",
+            null
+          ]
+        },
+        "method": {
+          "enum": [
+            "rule",
+            "judgement"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceItem"
+          }
+        },
+        "what": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "why": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "impact": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "fix": {
+          "$ref": "#/$defs/textOrNull"
+        },
+        "decide": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "$ref": "#/$defs/text"
+                },
+                "options": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              },
+              "required": [
+                "question",
+                "options"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "enforcement": {
+          "enum": [
+            "stated",
+            "enforced",
+            "both",
+            null
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": [
+                "validated",
+                "needs-checking"
+              ]
+            },
+            "rounds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "required": [
+            "status",
+            "rounds"
+          ],
+          "additionalProperties": false
+        },
+        "change": {
+          "enum": [
+            "new",
+            "still-open",
+            "fixed",
+            null
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "pack",
+        "check",
+        "card",
+        "kind",
+        "result",
+        "severity",
+        "method",
+        "evidence",
+        "what",
+        "why",
+        "impact",
+        "fix",
+        "decide",
+        "enforcement",
+        "confidence",
+        "validation",
+        "change"
+      ],
+      "additionalProperties": false
+    },
+    "summaryItem": {
+      "type": "object",
+      "properties": {
+        "card": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "fail": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "concern": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unknown": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pass": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "not-applicable": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "fail",
+            "concern",
+            "unknown",
+            "info",
+            "pass",
+            "not-applicable"
+          ],
+          "additionalProperties": false
+        },
+        "worst": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            null
+          ]
+        },
+        "needs_checking": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "card",
+        "counts",
+        "worst",
+        "needs_checking"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
