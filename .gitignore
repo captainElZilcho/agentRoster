@@ -7,6 +7,7 @@ dist/
 .env.*
 # generated reports
 out/
+.agentroster/
 CLAUDE.local.md
 .claude/settings.local.json
 # private working material (maintainer only)
