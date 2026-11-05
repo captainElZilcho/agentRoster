@@ -19,6 +19,18 @@ Notes that JSON can't hold as comments:
 | [`fleet-scout.roster.json`](fleet-scout.roster.json) | Researcher | Read only, so unattended (L3) is safe; cheap, fast model |
 | [`change-gate.roster.json`](change-gate.roster.json) | Gatekeeper | Approve or deny only; JSON in and out; never approves its own card |
 
+## Findings and coverage
+
+Two files for the same made-up run over the Ops Hub project, in the formats of
+[`spec/findings-and-coverage-v0.1.md`](../spec/findings-and-coverage-v0.1.md):
+
+- [`findings.example.json`](findings.example.json): the result of the checks, one entry each, with
+  every kind of result and one rule that is only stated in the instructions.
+- [`coverage.example.json`](coverage.example.json): what the scan looked at and what it couldn't
+  see.
+
+The file paths in them are made up. Both pass their validators.
+
 ## How one card could look in the collection
 
 Front (in the grid):

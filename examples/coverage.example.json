@@ -1,0 +1,128 @@
+{
+  "coverage": "0.1",
+  "snapshot": {
+    "id": "run-2026-11-05-1",
+    "taken_at": "2026-11-05T14:30:00Z",
+    "project": "ops-hub",
+    "standard": "0.2",
+    "packs": [
+      {
+        "id": "completeness",
+        "version": "0.1"
+      },
+      {
+        "id": "fit",
+        "version": "0.1"
+      },
+      {
+        "id": "least-agency",
+        "version": "0.1"
+      },
+      {
+        "id": "structure",
+        "version": "0.1"
+      }
+    ],
+    "mode": "standard",
+    "previous": null
+  },
+  "summary": {
+    "candidates": 5,
+    "read": 4,
+    "not_read": 0,
+    "not_understood": 1,
+    "cards": 3,
+    "no_agent": 1,
+    "unknowns": 1
+  },
+  "candidates": [
+    {
+      "file": ".claude/agents/change-gate.md",
+      "line": null,
+      "signals": [
+        "claude-agent-file"
+      ],
+      "detail": "Claude Code subagent file",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "change-gate"
+      ],
+      "note": null
+    },
+    {
+      "file": ".claude/agents/fleet-scout.md",
+      "line": null,
+      "signals": [
+        "claude-agent-file"
+      ],
+      "detail": "Claude Code subagent file",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "fleet-scout"
+      ],
+      "note": null
+    },
+    {
+      "file": "services/ops/legacy_runner.rb",
+      "line": 12,
+      "signals": [
+        "llm-call"
+      ],
+      "detail": "calls a model through a home-made HTTP wrapper",
+      "status": "not-understood",
+      "reason": "The wrapper builds the request from settings the scan could not follow.",
+      "outcome": "pending",
+      "cards": [],
+      "note": null
+    },
+    {
+      "file": "services/ops/llm_client.py",
+      "line": 2,
+      "signals": [
+        "llm-import"
+      ],
+      "detail": "imports anthropic",
+      "status": "read",
+      "reason": null,
+      "outcome": "no-agent",
+      "cards": [],
+      "note": "Imports the SDK but never calls it."
+    },
+    {
+      "file": "services/ops/orchestrator.py",
+      "line": 3,
+      "signals": [
+        "llm-import",
+        "llm-call"
+      ],
+      "detail": "imports anthropic and calls the messages API",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "ops-orchestrator"
+      ],
+      "note": null
+    }
+  ],
+  "unknowns": [
+    {
+      "card": "change-gate",
+      "field": "guardrails.needs_approval",
+      "reason": "loaded-from-database",
+      "detail": "The approval rules are loaded by name from a database.",
+      "evidence": [
+        {
+          "file": "services/gate/rules.py",
+          "line": 14,
+          "quote": "rules = db.load_rules(\"change-gate\")",
+          "found_by": "agent"
+        }
+      ]
+    }
+  ]
+}

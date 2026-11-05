@@ -1,6 +1,6 @@
 # AgentRoster
 
-**Status:** standard v0.2 draft and its schema; the skill is not built yet · **Licence:** Apache-2.0
+**Status:** standard v0.2, findings and coverage formats v0.1, and their validators; the skill is not built yet · **Licence:** Apache-2.0
 
 AgentRoster will be a tool you add to a project. It is meant to read the code, map every agent and
 every workflow that calls a model, write a standard **roster card** for each, and **assess** how
@@ -23,7 +23,7 @@ do, and is each one defined well enough to do its job?" in one place.
 
 ## How it works
 
-This is the planned design. Only the card validator is built so far.
+This is the planned design. Only the formats and their validators are built so far.
 
 AgentRoster will be a skill your own coding agent runs with your model (`npx skills add`). Small
 scripts with no dependencies will check everything it writes.
@@ -60,32 +60,36 @@ Examples: [`examples/`](examples/)
 AgentRoster is not affiliated with the A2A protocol; A2A's "Agent Card" is a different document,
 and roster cards can be mapped to it.
 
-## Check a card
+## Check a card or a run file
 
-Check a roster card against the v0.2 rules. Needs Node 20 or later and no install:
+Check a roster card, a `findings.json` or a `coverage.json` against its rules. Needs Node 20 or
+later and no install:
 
 ```
 node skills/agentroster/scripts/validate-card.mjs my-agent.roster.json
+node skills/agentroster/scripts/validate-findings.mjs findings.json
+node skills/agentroster/scripts/validate-coverage.mjs coverage.json
 ```
 
-Exit codes: `0` all cards are valid, `1` any card is invalid, `2` a file can't be read or isn't
-JSON.
+The formats are in [`spec/findings-and-coverage-v0.1.md`](spec/findings-and-coverage-v0.1.md).
+Exit codes (all three): `0` all files are valid, `1` any file is invalid, `2` a file can't be read
+or isn't JSON.
 
 ## Layout
 
 | Path | What it holds |
 |---|---|
-| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept) |
-| `schema/` | JSON Schemas for roster cards (`roster-card-0.2.schema.json`) |
-| `skills/agentroster/` | The skill; so far the card validator (`scripts/validate-card.mjs`) |
-| `examples/` | Example roster cards (`*.roster.json`) |
+| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept) and the findings and coverage formats (`findings-and-coverage-v0.1.md`) |
+| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json` and `coverage-0.1.schema.json` |
+| `skills/agentroster/` | The skill; so far the three validators (`scripts/validate-card.mjs`, `scripts/validate-findings.mjs`, `scripts/validate-coverage.mjs`) |
+| `examples/` | Example roster cards (`*.roster.json`), `findings.example.json` and `coverage.example.json` |
 | `tests/` | Tests and synthetic fixtures (`npm test`) |
 | `package.json` | Node 20 or later; no runtime dependencies |
 | `CLAUDE.md`, `AGENTS.md` | Instructions for coding agents working on this repo |
 
 ## Roadmap
 
-Done: standard v0.2 draft, its JSON Schema and the card validator.
+Done: standard v0.2 draft, its JSON Schema and the card validator; findings and coverage formats v0.1 and their validators.
 Next: the skill's phases (map, cards, assess, report).
 
 ## Contributing
