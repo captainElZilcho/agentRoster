@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import Ajv2020 from "ajv/dist/2020.js";
 import { checkSchema } from "../skills/agentroster/scripts/lib/schema-check.mjs";
+import { invalidCases } from "./fixtures/findings/invalid-cases.mjs";
 
 const publishedPath = new URL("../schema/findings-0.1.schema.json", import.meta.url);
 const shippedPath = new URL("../skills/agentroster/schema/findings-0.1.schema.json", import.meta.url);
@@ -49,3 +50,9 @@ test("path pattern accepts repo-relative paths and rejects the rest", () => {
   for (const p of ok) { assert.equal(v(p), true, p); assert.deepEqual(checkSchema(pathSchema, p), [], p); }
   for (const p of bad) { assert.equal(v(p), false, p); assert.notDeepEqual(checkSchema(pathSchema, p), [], p); }
 });
+
+for (const c of invalidCases) {
+  test(`invalid case ${c.name}: Ajv ${c.schemaOnly ? "rejects" : "accepts"} it`, () => {
+    assert.equal(ajvValidate(c.doc), !c.schemaOnly, JSON.stringify(ajvValidate.errors));
+  });
+}
