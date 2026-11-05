@@ -89,6 +89,12 @@ and put the detail in `CLAUDE.local.md` or `.local/`.
 - **Test-first** for code. Reports (HTML) work offline with no external requests.
 - **Ask before committing or pushing.** The repository is public: no personal data, local paths
   or private project names in committed files.
+- **Only public paths are committed:** `README.md`, `LICENSE`, `CONTRIBUTING.md`, `AGENTS.md`,
+  `CLAUDE.md`, `.gitignore`, `package.json`, `spec/`, `schema/`, `skills/`, `examples/`,
+  `tests/`, generic `.claude/` files. Before each commit, list the staged files and check every
+  one against this list; anything else stops the commit.
+- **AgentRoster stands alone.** Design it for any developer's project; it depends on no other
+  project, and apps use it only through its public files.
 
 ## Writing style
 
