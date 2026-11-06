@@ -208,10 +208,11 @@ const cardsOf = (roster) => (Array.isArray(roster) ? roster : roster?.cards ?? [
 
 /**
  * Compare a whole run with a golden set. `expect` is null or `{forbidden_strings: string[], notes: string[]}`; the listed strings must not appear.
+ * With `options.only === "coverage"`, cards are not compared (rosters may be absent).
  * Throws a TypeError when `expect` is set but `forbidden_strings` is not a list.
  * @returns {{match: boolean, differences: Array<{where: string, field: string|null, message: string}>}}
  */
-export function matchGolden(expected, actual) {
+export function matchGolden(expected, actual, options = {}) {
   const expect = expected?.expect ?? null;
   if (expect !== null && !Array.isArray(expect.forbidden_strings)) {
     throw new TypeError("expect.forbidden_strings must be a list");
@@ -219,16 +220,16 @@ export function matchGolden(expected, actual) {
   const forbidden = expect?.forbidden_strings ?? [];
   const scrub = (text) => scrubForbidden(text, forbidden);
   const fromRun = [
-    ...matchCards(cardsOf(expected?.roster), cardsOf(actual?.roster)),
+    ...(options?.only === "coverage" ? [] : matchCards(cardsOf(expected?.roster), cardsOf(actual?.roster))),
     ...matchCoverage(expected?.coverage, actual?.coverage),
   ].map((d) => ({ where: scrub(d.where), field: scrub(d.field), message: scrub(d.message) }));
   const differences = sortDiffs([...fromRun, ...findForbidden(forbidden, actual?.files ?? [])]);
   return { match: differences.length === 0, differences };
 }
 
-// Command line: match-golden.mjs <expected-dir> <run-dir>
+// Command line: match-golden.mjs [--only coverage] <expected-dir> <run-dir>
 
-const USAGE = "usage: match-golden.mjs <expected-dir> <run-dir>";
+const USAGE = "usage: match-golden.mjs [--only coverage] <expected-dir> <run-dir>";
 
 class CliError extends Error {}
 
@@ -301,10 +302,10 @@ function readFiles(dir) {
   return out;
 }
 
-function load(side, dir) {
-  const roster = readJson(path.join(dir, "roster.json"));
+function load(side, dir, onlyCoverage) {
+  const roster = onlyCoverage ? null : readJson(path.join(dir, "roster.json"));
   const coverage = readJson(path.join(dir, "coverage.json"));
-  if (!validateRosterFile(roster).valid) {
+  if (!onlyCoverage && !validateRosterFile(roster).valid) {
     throw new CliError(`invalid ${side} roster.json: run validate-card / validate-coverage for details`);
   }
   if (!validateCoverage(coverage).valid) {
@@ -316,21 +317,26 @@ function load(side, dir) {
 /** @returns {number} Exit code: 0 match, 1 differences, 2 error. */
 export function runMatchCli(args) {
   try {
-    if (args.length !== 2) throw new CliError(USAGE);
-    const [expectedDir, runDir] = args;
-    const expected = { ...load("expected", expectedDir), expect: readExpect(path.join(expectedDir, "expect.json")) };
-    const actual = { ...load("run", runDir), files: readFiles(runDir) };
+    const onlyCoverage = args[0] === "--only";
+    if (onlyCoverage && args[1] !== "coverage") throw new CliError(USAGE);
+    const [expectedDir, runDir, ...extra] = onlyCoverage ? args.slice(2) : args;
+    if (!expectedDir || !runDir || extra.length > 0) {
+      throw new CliError(USAGE);
+    }
+    const expected = { ...load("expected", expectedDir, onlyCoverage), expect: readExpect(path.join(expectedDir, "expect.json")) };
+    const actual = { ...load("run", runDir, onlyCoverage), files: readFiles(runDir) };
     // roster.json and coverage.json may be symlinks (skipped by readFiles); scan what was actually read.
-    for (const name of ["roster.json", "coverage.json"]) {
+    for (const name of onlyCoverage ? ["coverage.json"] : ["roster.json", "coverage.json"]) {
       if (!actual.files.some((f) => f.path === name)) actual.files.push({ path: name, text: readText(path.join(runDir, name)) });
     }
-    const result = matchGolden(expected, actual);
+    const result = matchGolden(expected, actual, { only: onlyCoverage ? "coverage" : undefined });
     for (const d of result.differences) {
       console.log(d.field === null ? `${d.where}: ${d.message}` : `${d.where}: ${d.field}: ${d.message}`);
     }
     if (result.match) {
       const n = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
-      console.log(`match: ${n(cardsOf(expected.roster).length, "card")}, ${n(expected.coverage.candidates.length, "candidate")}, ${n(expected.coverage.unknowns.length, "unknown")}`);
+      const cards = onlyCoverage ? "" : `${n(cardsOf(expected.roster).length, "card")}, `;
+      console.log(`match: ${cards}${n(expected.coverage.candidates.length, "candidate")}, ${n(expected.coverage.unknowns.length, "unknown")}`);
       return 0;
     }
     console.log(`differences: ${result.differences.length}`);

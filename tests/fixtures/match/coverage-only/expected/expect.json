@@ -1,0 +1,8 @@
+{
+  "forbidden_strings": [
+    "sk-FAKE-match-0000"
+  ],
+  "notes": [
+    "Synthetic answer key for the coverage-only tests."
+  ]
+}

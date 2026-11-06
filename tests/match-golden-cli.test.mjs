@@ -103,7 +103,7 @@ test("match: expect.json is optional", () => {
 test("match: no arguments print usage and exit 2", () => {
   const r = run([]);
   assert.equal(r.status, 2);
-  assert.equal(r.stderr, "usage: match-golden.mjs <expected-dir> <run-dir>\n");
+  assert.equal(r.stderr, "usage: match-golden.mjs [--only coverage] <expected-dir> <run-dir>\n");
   assert.equal(run(["a"]).status, 2);
   assert.equal(run(["a", "b", "c"]).status, 2);
 });
@@ -236,5 +236,73 @@ test("match: a forbidden string with quote and backslash is never printed, raw o
       assert.ok(!r.stdout.includes(bad), bad);
       assert.ok(!r.stderr.includes(bad), bad);
     }
+  });
+});
+
+const covExpected = "tests/fixtures/match/coverage-only/expected";
+const USAGE_LINE = "usage: match-golden.mjs [--only coverage] <expected-dir> <run-dir>\n";
+
+test("only coverage: a matching run exits 0 with the short summary", () => {
+  const r = run(["--only", "coverage", covExpected, "tests/fixtures/match/coverage-only/run-ok"]);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, "match: 3 candidates, 1 unknown\n");
+  assert.equal(r.stderr, "");
+});
+
+test("only coverage: a differing run lists differences and hides the forbidden string", () => {
+  const r = run(["--only", "coverage", covExpected, "tests/fixtures/match/coverage-only/run-diff"]);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /file map\.md: contains a forbidden string/);
+  assert.match(r.stdout, /candidate services\/llm_client\.py:2: missing candidate/);
+  assert.match(r.stdout, /candidate agents\/gate\.md:\*: signals: /);
+  assert.ok(r.stdout.endsWith("differences: 3\n"));
+  assert.ok(!r.stdout.includes(FAKE));
+});
+
+test("only coverage: roster.json is not needed on either side", () => {
+  withTempDir((dir) => {
+    copyRun("tests/fixtures/match/coverage-only/run-ok", dir);
+    assert.ok(!fs.existsSync(path.join(dir, "roster.json")));
+    assert.equal(run(["--only", "coverage", covExpected, dir]).status, 0);
+  });
+});
+
+test("only coverage: a forbidden string in map.md is reported", () => {
+  withTempDir((dir) => {
+    copyRun("tests/fixtures/match/coverage-only/run-ok", dir);
+    fs.writeFileSync(path.join(dir, "map.md"), `x ${FAKE}`);
+    const r = run(["--only", "coverage", covExpected, dir]);
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /file map\.md: contains a forbidden string/);
+    assert.ok(!r.stdout.includes(FAKE));
+  });
+});
+
+test("only coverage: a bad flag or a misplaced flag prints usage and exits 2", () => {
+  const ok = "tests/fixtures/match/coverage-only/run-ok";
+  for (const args of [["--only", "cards", covExpected, ok], ["--only"], ["--only", covExpected, ok],
+    [covExpected, "--only", "coverage", ok], [covExpected, ok, "--only", "coverage"]]) {
+    const r = run(args);
+    assert.equal(r.status, 2, args.join(" "));
+    assert.equal(r.stderr, USAGE_LINE);
+  }
+});
+
+test("match: a 0.1 expected coverage matches a 0.2 run coverage", () => {
+  withTempDir((dir) => {
+    const exp = path.join(dir, "exp");
+    const act = path.join(dir, "act");
+    fs.mkdirSync(exp);
+    fs.mkdirSync(act);
+    const v01 = JSON.parse(fs.readFileSync(path.join(expected, "coverage.json"), "utf8"));
+    assert.equal(v01.coverage, "0.1");
+    fs.copyFileSync(path.join(expected, "coverage.json"), path.join(exp, "coverage.json"));
+    const v02 = structuredClone(v01);
+    v02.coverage = "0.2";
+    v02.summary.needs_checking = 0;
+    for (const c of v02.candidates) { c.found_by = "script"; c.validation = { status: "validated", rounds: 1 }; }
+    fs.writeFileSync(path.join(act, "coverage.json"), JSON.stringify(v02));
+    const r = run(["--only", "coverage", exp, act]);
+    assert.equal(r.status, 0, r.stdout + r.stderr);
   });
 });

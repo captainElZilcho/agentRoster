@@ -239,3 +239,17 @@ test("matchGolden: overlapping forbidden strings leave no tail", () => {
   for (const bad of ["abcd", "efgh", "FAKE"]) assert.ok(!text.includes(bad), bad);
   assert.equal(text.split("[forbidden string]").length - 1, 1);
 });
+
+test("matchCoverage ignores found_by and validation", () => {
+  const base = { candidates: [{ file: "a.md", line: null, signals: ["x"], status: "read", outcome: "cards", cards: ["a"] }], unknowns: [] };
+  const run = structuredClone(base);
+  run.candidates[0].found_by = "agent";
+  run.candidates[0].validation = { status: "needs-checking", rounds: 3 };
+  assert.deepEqual(matchCoverage(base, run), []);
+});
+
+test("matchGolden with only coverage does not need rosters", () => {
+  const cov = { candidates: [], unknowns: [] };
+  const r = matchGolden({ coverage: cov }, { coverage: cov, files: [] }, { only: "coverage" });
+  assert.deepEqual(r, { match: true, differences: [] });
+});

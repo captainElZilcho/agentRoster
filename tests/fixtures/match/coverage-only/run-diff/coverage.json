@@ -1,0 +1,97 @@
+{
+  "coverage": "0.2",
+  "snapshot": {
+    "id": "run-2026-11-05-1",
+    "taken_at": "2026-11-05T14:30:00Z",
+    "project": "synthetic",
+    "standard": "0.2",
+    "packs": [
+      {
+        "id": "completeness",
+        "version": "0.1"
+      },
+      {
+        "id": "fit",
+        "version": "0.1"
+      },
+      {
+        "id": "least-agency",
+        "version": "0.1"
+      },
+      {
+        "id": "structure",
+        "version": "0.1"
+      }
+    ],
+    "mode": "standard",
+    "previous": null
+  },
+  "summary": {
+    "candidates": 2,
+    "read": 2,
+    "not_read": 0,
+    "not_understood": 0,
+    "cards": 2,
+    "no_agent": 0,
+    "needs_checking": 0,
+    "unknowns": 1
+  },
+  "candidates": [
+    {
+      "file": "agents/gate.md",
+      "line": null,
+      "signals": [
+        "llm-call"
+      ],
+      "detail": "Claude Code subagent file",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "gate"
+      ],
+      "note": null,
+      "found_by": "script",
+      "validation": {
+        "status": "validated",
+        "rounds": 1
+      }
+    },
+    {
+      "file": "prompts/orchestrator.md",
+      "line": null,
+      "signals": [
+        "prompt-file"
+      ],
+      "detail": "Instructions for the Claude Code main agent",
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "orchestrator"
+      ],
+      "note": null,
+      "found_by": "agent",
+      "validation": {
+        "status": "validated",
+        "rounds": 1
+      }
+    }
+  ],
+  "unknowns": [
+    {
+      "card": "gate",
+      "field": "guardrails.needs_approval",
+      "reason": "loaded-from-database",
+      "detail": "The approval rules are loaded by name from a database.",
+      "evidence": [
+        {
+          "file": "services/rules.py",
+          "line": 14,
+          "quote": "rules = db.load_rules(\"change-gate\")",
+          "found_by": "agent"
+        }
+      ]
+    }
+  ]
+}
