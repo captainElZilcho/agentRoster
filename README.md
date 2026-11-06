@@ -46,7 +46,7 @@ project ─► MAP ─► map.md ─► CARDS ─► roster.json ─► ASSESS �
    git-ignored folder: a dashboard of agent cards at the top, then the findings and
    recommendations below.
 
-Everything a model writes is checked by a fresh validator before it counts (built for the map).
+Everything a model writes is checked by a fresh validator before it counts (for now, only the map phase is checked this way).
 
 ### Run the map
 
@@ -60,10 +60,13 @@ the scripts below and tells you what it found and what it could not see.
 ### Map scripts
 
 ```
-node skills/agentroster/scripts/detect.mjs tests/fixtures/detect/anthropic-sdk --out detect.json
+node skills/agentroster/scripts/detect.mjs tests/fixtures/detect/anthropic-sdk
 node skills/agentroster/scripts/check-map.mjs tests/fixtures/map/ok
 node skills/agentroster/scripts/redact-check.mjs tests/fixtures/map/ok
 ```
+
+The paths above are this repo's own test fixtures. `detect.mjs` prints to the screen; add
+`--out <file>` to write a file (the skill writes into the run folder).
 
 - `detect.mjs <project-dir> [--out <file>] [--exclude <dir>]...` looks for the common signs of
   model use without running anything. Exit codes: `0` it ran, `2` the folder can't be read.
