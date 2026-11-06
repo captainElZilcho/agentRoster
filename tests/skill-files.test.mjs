@@ -128,3 +128,18 @@ test("no note calls a single fixed model call an agent", () => {
     assert.doesNotMatch(read(f), /even with no tools|kind agent\), but the model chooses nothing|kind agent, that chooses nothing/, f);
   }
 });
+
+test("SKILL.md's git-ignore check cannot run the project's git hooks or fsmonitor", () => {
+  const text = read("SKILL.md");
+  const lines = text.split(/\r?\n/).filter((l) => /check-ignore/.test(l));
+  assert.ok(lines.length > 0, "SKILL.md has a check-ignore line");
+  const joined = text.replace(/\s*\n\s*/g, " ");
+  const cmd = /`(git [^`]*check-ignore[^`]*)`/.exec(joined);
+  assert.ok(cmd, "the check-ignore command is in backticks");
+  assert.match(cmd[1], /-c core\.fsmonitor=false/);
+  assert.match(cmd[1], /-c core\.hooksPath=\/dev\/null/);
+  assert.match(cmd[1], /--no-index/);
+  // No other git command on the scanned project.
+  const others = [...joined.matchAll(/`(git [^`]*)`/g)].map((m) => m[1]).filter((c) => c !== cmd[1]);
+  assert.deepEqual(others, [], "SKILL.md runs no other git command");
+});

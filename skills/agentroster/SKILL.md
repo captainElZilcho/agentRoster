@@ -40,6 +40,8 @@ not built yet. Do not write cards, findings or reports by hand.
 - **Nothing invented.** A thing the code doesn't show is left empty or recorded as unknown. A
   place you can't settle is marked needs checking, never dropped and never guessed.
 - **Never commit** anything, and never change `.gitignore` yourself.
+- **No git commands on the project** other than the git-ignore check in step 1 (no status, diff,
+  log or any other). A project's git config can name commands that git runs for you.
 
 ## Paths
 
@@ -59,15 +61,18 @@ found, listed on screen) comes only from `validate-coverage.mjs`, `check-map.mjs
 
 ## Step 1: setup
 
-1. **Project root.** In a git repository, the root is `git rev-parse --show-toplevel`.
-   Otherwise it is the folder the user named, or the current folder.
+1. **Project root.** In a git repository, the root is the nearest folder, from the current one
+   upward, that holds a `.git` entry. Otherwise it is the folder the user named, or the current
+   folder.
 2. **Scope.** The whole project, unless the user names a folder. If they do, the scope is that
    folder. Paths in the output are always from the project root.
 3. **Output folder.** `.agentroster/` at the project root, unless the user names another one.
    The run folder inside it is `run-YYYY-MM-DD-N` (today's date in UTC; `N` counts up from 1
    within a day, so take the next free number).
 4. **Git-ignore check.** In a git repository, when the output folder is inside the project, run
-   `git check-ignore -q <run>/map.md`. Exit code `0` means git ignores it. Anything else means it
+   exactly `git -c core.fsmonitor=false -c core.hooksPath=/dev/null check-ignore --no-index -q <run>/map.md`
+   (the two settings stop git from running a command the project's own config names). Exit code
+   `0` means git ignores it. Anything else means it
    does not: **stop and ask the user** to add the output folder to `.gitignore` (for example a
    line `.agentroster/`) or to pick another folder. Do not go on until the check passes. If the
    project is not a git repository, say so to the user and go on.
