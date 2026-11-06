@@ -1,0 +1,2 @@
+{"ecosystems": ["mcp"], "candidates": [
+ {"file": ".mcp.json", "line": null, "signals": ["mcp-config"], "detail": "MCP server config", "ecosystems": ["mcp"]}]}

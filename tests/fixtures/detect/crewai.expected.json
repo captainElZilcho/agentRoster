@@ -1,0 +1,2 @@
+{"ecosystems": ["crewai"], "candidates": [
+ {"file": "crew.py", "line": 1, "signals": ["llm-import"], "detail": "imports crewai", "ecosystems": ["crewai"]}]}

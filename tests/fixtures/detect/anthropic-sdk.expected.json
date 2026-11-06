@@ -1,0 +1,3 @@
+{"ecosystems": ["anthropic-sdk"], "candidates": [
+ {"file": "agent.py", "line": 3, "signals": ["llm-import"], "detail": "imports anthropic", "ecosystems": ["anthropic-sdk"]},
+ {"file": "agent.py", "line": 8, "signals": ["llm-call"], "detail": "calls messages.create", "ecosystems": ["anthropic-sdk"]}]}

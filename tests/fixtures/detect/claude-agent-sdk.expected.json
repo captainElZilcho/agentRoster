@@ -1,0 +1,3 @@
+{"ecosystems": ["claude-agent-sdk"], "candidates": [
+ {"file": "run.py", "line": 1, "signals": ["llm-import"], "detail": "imports claude_agent_sdk", "ecosystems": ["claude-agent-sdk"]},
+ {"file": "run.ts", "line": 1, "signals": ["llm-import"], "detail": "imports @anthropic-ai/claude-agent-sdk", "ecosystems": ["claude-agent-sdk"]}]}

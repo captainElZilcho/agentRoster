@@ -1,0 +1,7 @@
+{"ecosystems": ["anthropic-sdk", "langgraph", "openai-sdk"], "candidates": [
+ {"file": "src/a.ts", "line": 1, "signals": ["llm-import"], "detail": "imports @anthropic-ai/sdk", "ecosystems": ["anthropic-sdk"]},
+ {"file": "src/a.ts", "line": 4, "signals": ["llm-import"], "detail": "imports openai", "ecosystems": ["openai-sdk"]},
+ {"file": "src/a.ts", "line": 5, "signals": ["llm-import"], "detail": "imports langgraph", "ecosystems": ["langgraph"]},
+ {"file": "src/a.ts", "line": 6, "signals": ["llm-import"], "detail": "imports @anthropic-ai/sdk", "ecosystems": ["anthropic-sdk"]},
+ {"file": "src/a.ts", "line": 7, "signals": ["llm-call"], "detail": "calls messages.stream", "ecosystems": ["anthropic-sdk"]},
+ {"file": "src/a.ts", "line": 8, "signals": ["llm-call"], "detail": "calls responses.create", "ecosystems": ["openai-sdk"]}]}

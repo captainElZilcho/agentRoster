@@ -1,0 +1,4 @@
+{"ecosystems": ["openai-sdk"], "candidates": [
+ {"file": "chat.py", "line": 1, "signals": ["llm-import"], "detail": "imports openai", "ecosystems": ["openai-sdk"]},
+ {"file": "chat.py", "line": 6, "signals": ["llm-call"], "detail": "calls chat.completions.create", "ecosystems": ["openai-sdk"]},
+ {"file": "chat.py", "line": 7, "signals": ["llm-call"], "detail": "calls responses.create", "ecosystems": ["openai-sdk"]}]}

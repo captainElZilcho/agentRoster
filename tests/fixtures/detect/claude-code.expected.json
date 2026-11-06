@@ -1,0 +1,3 @@
+{"ecosystems": ["claude-code"], "candidates": [
+ {"file": ".claude/agents/reviewer.md", "line": null, "signals": ["claude-agent-file"], "detail": "Claude Code subagent file", "ecosystems": ["claude-code"]},
+ {"file": ".claude/skills/lint/SKILL.md", "line": null, "signals": ["skill-file"], "detail": "skill file", "ecosystems": ["claude-code"]}]}

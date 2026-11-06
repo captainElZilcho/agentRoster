@@ -1,0 +1,166 @@
+{
+  "patterns_file": "0.1",
+  "patterns": [
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:anthropic)\\b|from\\s+(?:anthropic)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports anthropic"
+    },
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-import",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^\\s*(?:(?:import|export)\\b[^'\"]*|\\}\\s*)from\\s*['\"](?:@anthropic-ai\\/(?:sdk|bedrock-sdk|vertex-sdk)(?:\\/[^'\"]*)?)['\"]|^\\s*(?:const|let|var)\\b[^=;'\"]*=\\s*require\\(\\s*['\"](?:@anthropic-ai\\/(?:sdk|bedrock-sdk|vertex-sdk)(?:\\/[^'\"]*)?)['\"]\\s*\\)",
+      "detail": "imports @anthropic-ai/sdk"
+    },
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-call",
+      "files": "**/*.py",
+      "line": "^[^#\"']*\\.messages\\.create\\(",
+      "detail": "calls messages.create"
+    },
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-call",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.messages\\.create\\(",
+      "detail": "calls messages.create"
+    },
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-call",
+      "files": "**/*.py",
+      "line": "^[^#\"']*\\.messages\\.stream\\(",
+      "detail": "calls messages.stream"
+    },
+    {
+      "ecosystem": "anthropic-sdk",
+      "signal": "llm-call",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.messages\\.stream\\(",
+      "detail": "calls messages.stream"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:openai)\\b|from\\s+(?:openai)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports openai"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-import",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^\\s*(?:(?:import|export)\\b[^'\"]*|\\}\\s*)from\\s*['\"](?:openai(?:\\/[^'\"]*)?)['\"]|^\\s*(?:const|let|var)\\b[^=;'\"]*=\\s*require\\(\\s*['\"](?:openai(?:\\/[^'\"]*)?)['\"]\\s*\\)",
+      "detail": "imports openai"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-call",
+      "files": "**/*.py",
+      "line": "^[^#\"']*\\.chat\\.completions\\.create\\(",
+      "detail": "calls chat.completions.create"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-call",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.chat\\.completions\\.create\\(",
+      "detail": "calls chat.completions.create"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-call",
+      "files": "**/*.py",
+      "line": "^[^#\"']*\\.responses\\.create\\(",
+      "detail": "calls responses.create"
+    },
+    {
+      "ecosystem": "openai-sdk",
+      "signal": "llm-call",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.responses\\.create\\(",
+      "detail": "calls responses.create"
+    },
+    {
+      "ecosystem": "claude-agent-sdk",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:claude_agent_sdk)\\b|from\\s+(?:claude_agent_sdk)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports claude_agent_sdk"
+    },
+    {
+      "ecosystem": "claude-agent-sdk",
+      "signal": "llm-import",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^\\s*(?:(?:import|export)\\b[^'\"]*|\\}\\s*)from\\s*['\"](?:@anthropic-ai\\/claude-agent-sdk(?:\\/[^'\"]*)?)['\"]|^\\s*(?:const|let|var)\\b[^=;'\"]*=\\s*require\\(\\s*['\"](?:@anthropic-ai\\/claude-agent-sdk(?:\\/[^'\"]*)?)['\"]\\s*\\)",
+      "detail": "imports @anthropic-ai/claude-agent-sdk"
+    },
+    {
+      "ecosystem": "langgraph",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:langgraph)\\b|from\\s+(?:langgraph)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports langgraph"
+    },
+    {
+      "ecosystem": "langgraph",
+      "signal": "llm-import",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^\\s*(?:(?:import|export)\\b[^'\"]*|\\}\\s*)from\\s*['\"](?:@langchain\\/langgraph(?:\\/[^'\"]*)?)['\"]|^\\s*(?:const|let|var)\\b[^=;'\"]*=\\s*require\\(\\s*['\"](?:@langchain\\/langgraph(?:\\/[^'\"]*)?)['\"]\\s*\\)",
+      "detail": "imports langgraph"
+    },
+    {
+      "ecosystem": "langgraph",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:langchain(?:_\\w+)?)\\b|from\\s+(?:langchain(?:_\\w+)?)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports langchain"
+    },
+    {
+      "ecosystem": "langgraph",
+      "signal": "llm-import",
+      "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "line": "^\\s*(?:(?:import|export)\\b[^'\"]*|\\}\\s*)from\\s*['\"](?:langchain(?:\\/[^'\"]*)?|@langchain\\/(?!langgraph)[\\w-]+(?:\\/[^'\"]*)?)['\"]|^\\s*(?:const|let|var)\\b[^=;'\"]*=\\s*require\\(\\s*['\"](?:langchain(?:\\/[^'\"]*)?|@langchain\\/(?!langgraph)[\\w-]+(?:\\/[^'\"]*)?)['\"]\\s*\\)",
+      "detail": "imports langchain"
+    },
+    {
+      "ecosystem": "crewai",
+      "signal": "llm-import",
+      "files": "**/*.py",
+      "line": "^\\s*(?:import\\s+(?:crewai(?:_tools)?)\\b|from\\s+(?:crewai(?:_tools)?)(?:\\.\\w+)*\\s+import\\b)",
+      "detail": "imports crewai"
+    },
+    {
+      "ecosystem": "claude-code",
+      "signal": "claude-agent-file",
+      "files": "**/.claude/agents/*.md",
+      "line": null,
+      "detail": "Claude Code subagent file"
+    },
+    {
+      "ecosystem": "claude-code",
+      "signal": "skill-file",
+      "files": "**/SKILL.md",
+      "line": null,
+      "detail": "skill file"
+    },
+    {
+      "ecosystem": "mcp",
+      "signal": "mcp-config",
+      "files": "**/.mcp.json",
+      "line": null,
+      "detail": "MCP server config"
+    },
+    {
+      "ecosystem": "roster",
+      "signal": "roster-card",
+      "files": "**/*.roster.json",
+      "line": null,
+      "detail": "roster card"
+    }
+  ]
+}

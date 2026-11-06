@@ -1,0 +1,5 @@
+{"ecosystems": ["langgraph"], "candidates": [
+ {"file": "graph.py", "line": 1, "signals": ["llm-import"], "detail": "imports langgraph", "ecosystems": ["langgraph"]},
+ {"file": "graph.py", "line": 2, "signals": ["llm-import"], "detail": "imports langchain", "ecosystems": ["langgraph"]},
+ {"file": "graph.ts", "line": 1, "signals": ["llm-import"], "detail": "imports langgraph", "ecosystems": ["langgraph"]},
+ {"file": "graph.ts", "line": 2, "signals": ["llm-import"], "detail": "imports langchain", "ecosystems": ["langgraph"]}]}
