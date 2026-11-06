@@ -20,28 +20,32 @@
       "signal": "llm-call",
       "files": "**/*.py",
       "line": "^[^#\"']*\\.messages\\.create\\(",
-      "detail": "calls messages.create"
+      "detail": "calls messages.create",
+      "requires": "anthropic-sdk"
     },
     {
       "ecosystem": "anthropic-sdk",
       "signal": "llm-call",
       "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
       "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.messages\\.create\\(",
-      "detail": "calls messages.create"
+      "detail": "calls messages.create",
+      "requires": "anthropic-sdk"
     },
     {
       "ecosystem": "anthropic-sdk",
       "signal": "llm-call",
       "files": "**/*.py",
       "line": "^[^#\"']*\\.messages\\.stream\\(",
-      "detail": "calls messages.stream"
+      "detail": "calls messages.stream",
+      "requires": "anthropic-sdk"
     },
     {
       "ecosystem": "anthropic-sdk",
       "signal": "llm-call",
       "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
       "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.messages\\.stream\\(",
-      "detail": "calls messages.stream"
+      "detail": "calls messages.stream",
+      "requires": "anthropic-sdk"
     },
     {
       "ecosystem": "openai-sdk",
@@ -62,28 +66,32 @@
       "signal": "llm-call",
       "files": "**/*.py",
       "line": "^[^#\"']*\\.chat\\.completions\\.create\\(",
-      "detail": "calls chat.completions.create"
+      "detail": "calls chat.completions.create",
+      "requires": "openai-sdk"
     },
     {
       "ecosystem": "openai-sdk",
       "signal": "llm-call",
       "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
       "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.chat\\.completions\\.create\\(",
-      "detail": "calls chat.completions.create"
+      "detail": "calls chat.completions.create",
+      "requires": "openai-sdk"
     },
     {
       "ecosystem": "openai-sdk",
       "signal": "llm-call",
       "files": "**/*.py",
       "line": "^[^#\"']*\\.responses\\.create\\(",
-      "detail": "calls responses.create"
+      "detail": "calls responses.create",
+      "requires": "openai-sdk"
     },
     {
       "ecosystem": "openai-sdk",
       "signal": "llm-call",
       "files": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
       "line": "^(?!\\s*(?:\\/\\/|\\*|\\/\\*))[^/\"'`]*\\.responses\\.create\\(",
-      "detail": "calls responses.create"
+      "detail": "calls responses.create",
+      "requires": "openai-sdk"
     },
     {
       "ecosystem": "claude-agent-sdk",
@@ -131,7 +139,7 @@
       "ecosystem": "crewai",
       "signal": "llm-import",
       "files": "**/*.py",
-      "line": "^\\s*(?:import\\s+(?:crewai(?:_tools)?)\\b|from\\s+(?:crewai(?:_tools)?)(?:\\.\\w+)*\\s+import\\b)",
+      "line": "^\\s*(?:import\\s+(?:crewai)\\b|from\\s+(?:crewai)(?:\\.\\w+)*\\s+import\\b)",
       "detail": "imports crewai"
     },
     {

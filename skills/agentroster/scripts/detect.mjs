@@ -10,6 +10,11 @@
 //   `detail` is fixed text from the pattern. Lists are sorted; same input gives the same output.
 //   `skipped` counts what was not read, by reason (see listFiles). `--exclude` folders count as
 //   run_folder, one per skipped file.
+//
+// Known limits: lines are matched one at a time, so the script cannot see inside multi-line
+// strings or block comments, and imports combined on one line (`import os, anthropic`) are missed.
+// A call pattern (`llm-call`) counts only when its `requires` ecosystem has an import in the same
+// file. The agent search covers what the floor leaves out.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -181,6 +186,7 @@ const SNIFF_BYTES = 8 * 1024;
  * @property {string} files A glob matched against the relative path: `**`, `*`, `?`, `{a,b}`.
  * @property {string|null} line A JavaScript regex source applied to one line, or null for a whole-file signal.
  * @property {string} detail Fixed text for the candidate.
+ * @property {string|null} [requires] Ecosystem whose `llm-import` must be in the same file; needed for `llm-call`.
  */
 
 /**
@@ -223,6 +229,10 @@ export function loadPatterns(file = new URL("../ecosystems/patterns.json", impor
     if (!SIGNALS.includes(p.signal)) throw bad(`signal must be one of ${SIGNALS.join(", ")}`);
     if (typeof p.files !== "string" || p.files === "") throw bad("files must be a glob string");
     if (typeof p.detail !== "string" || p.detail === "") throw bad("detail must be a text");
+    const req = p.requires ?? null;
+    if (req !== null && !ECOSYSTEMS.includes(req)) throw bad("requires must be null or a known ecosystem");
+    if (p.signal === "llm-call" && req === null) throw bad("requires must name an ecosystem for an llm-call pattern");
+    if (req !== null && p.signal !== "llm-call") throw bad("requires is only for llm-call patterns");
     if (p.line !== null) {
       if (typeof p.line !== "string") throw bad("line must be a regex string or null");
       try { new RegExp(p.line); } catch (err) { throw bad(`line is not a valid regex (${err.message})`); }
@@ -318,8 +328,15 @@ export function detect(root, patterns = loadPatterns(), options = {}) {
     for (const c of hits) if (c.re === null) add(file, null, c.p);
     if (got.text === null) continue;
     const lines = got.text.split(/\r?\n/);
+    /** @type {Array<[number, Pattern]>} */
+    const lineHits = [];
     for (let i = 0; i < lines.length; i++) {
-      for (const c of hits) if (c.re !== null && c.re.test(lines[i])) add(file, i + 1, c.p);
+      for (const c of hits) if (c.re !== null && c.re.test(lines[i])) lineHits.push([i + 1, c.p]);
+    }
+    const imported = new Set(lineHits.filter(([, p]) => p.signal === "llm-import").map(([, p]) => p.ecosystem));
+    for (const [n, p] of lineHits) {
+      if (p.signal === "llm-call" && !imported.has(p.requires)) continue;
+      add(file, n, p);
     }
   }
   const candidates = [...found.values()]
@@ -364,7 +381,13 @@ export function main(argv) {
   }
   if (positional.length !== 1) { console.error(USAGE); return 2; }
   const dir = positional[0];
-  const patterns = loadPatterns();
+  let patterns;
+  try {
+    patterns = loadPatterns();
+  } catch (err) {
+    console.error(err.message);
+    return 2;
+  }
   let result;
   try {
     result = detect(dir, patterns, { exclude });

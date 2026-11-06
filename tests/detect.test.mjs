@@ -68,12 +68,12 @@ test("two patterns on one line give one candidate", () => {
   const d = tmp();
   put(d, "a.py", "import anthropic\n");
   const patterns = [
-    { ecosystem: "openai-sdk", signal: "llm-call", files: "**/*.py", line: "^import", detail: "second" },
+    { ecosystem: "openai-sdk", signal: "other", files: "**/*.py", line: "^import", detail: "second" },
     { ecosystem: "anthropic-sdk", signal: "llm-import", files: "**/*.py", line: "^import", detail: "first" },
   ];
   const r = detect(d, patterns);
   assert.deepEqual(r.candidates, [{
-    file: "a.py", line: 1, signals: ["llm-call", "llm-import"], detail: "second; first",
+    file: "a.py", line: 1, signals: ["llm-import", "other"], detail: "second; first",
     ecosystems: ["anthropic-sdk", "openai-sdk"],
   }]);
   fs.rmSync(d, { recursive: true, force: true });
@@ -145,5 +145,30 @@ test("loadPatterns names the bad entry", () => {
   assert.throws(() => loadPatterns(f), /entry 1.*line/);
   fs.writeFileSync(f, "{}");
   assert.throws(() => loadPatterns(f), /patterns/);
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test("a call line without the SDK import in the same file is not a candidate", () => {
+  const d = tmp();
+  put(d, "twilio_app.py", 'from twilio.rest import Client\nclient = Client()\nclient.messages.create(body="hi")\n');
+  put(d, "wrong.py", 'import openai\nclient.messages.create(body="hi")\n');
+  put(d, "other.py", 'import anthropic\n');
+  const r = detect(d);
+  assert.deepEqual(r.candidates.map((c) => [c.file, c.line, c.signals[0]]), [["other.py", 1, "llm-import"], ["wrong.py", 1, "llm-import"]]);
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test("loadPatterns checks requires", () => {
+  const d = tmp();
+  const f = path.join(d, "p.json");
+  const base = { ecosystem: "mcp", signal: "llm-call", files: "**/*", line: "x", detail: "x" };
+  fs.writeFileSync(f, JSON.stringify({ patterns: [base] }));
+  assert.throws(() => loadPatterns(f), /entry 0.*requires/);
+  fs.writeFileSync(f, JSON.stringify({ patterns: [{ ...base, requires: "nope" }] }));
+  assert.throws(() => loadPatterns(f), /entry 0.*requires/);
+  fs.writeFileSync(f, JSON.stringify({ patterns: [{ ...base, signal: "other", requires: "openai-sdk" }] }));
+  assert.throws(() => loadPatterns(f), /entry 0.*requires/);
+  fs.writeFileSync(f, JSON.stringify({ patterns: [{ ...base, requires: "openai-sdk" }] }));
+  assert.equal(loadPatterns(f).length, 1);
   fs.rmSync(d, { recursive: true, force: true });
 });
