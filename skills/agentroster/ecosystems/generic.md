@@ -68,7 +68,8 @@ Never open `.env` files, including `.env.example`.
 - **Workflow:** the code calls the model at fixed points: one call, then the next, or a branch the
   code takes on the model's answer. Several model steps in a fixed order make a workflow card;
   each step with its own job is a card that reports to it.
-- A single call with its own job is an agent card, even with no tools.
+- A single call at a fixed point (one HTTP request or one SDK call, no tool loop) is kind
+  `workflow`: the model picks nothing. It gets its own card when it has its own job.
 
 ## Traps
 
@@ -76,14 +77,15 @@ Never open `.env` files, including `.env.example`.
   in the files that call it. Card the callers, never the wrapper.
 - **One prompt, many call sites** is one agent. Two prompts through the same wrapper are two.
 - **Embeddings, moderation, speech, image and token-count calls** call a model but have no
-  prompt with a job. They are not agent cards. Record them as data the agent uses, or as
+  prompt with a job. They are not cards. Record them as data the agent uses, or as
   `no-agent` with a note.
 - **OpenAI-compatible endpoints.** A client pointed at another host with a base URL (`base_url`,
   `baseURL`, `OPENAI_BASE_URL`) talks to that provider. Record the provider the config shows, or
   an unknown if it comes from an env variable.
 - **Tests, mocks and examples.** Code under `tests/`, fixtures, stubs and `examples/` that a
-  person runs by hand are not the product's agents. Record them as `no-agent` ("test code"),
-  unless the project ships them.
+  person runs by hand are not the product's agents. Record them as `no-agent` ("test code").
+  If you are not sure whether the project ships them as agents (a template or demo repository),
+  mark them `needs-checking` instead.
 - **Unknown framework.** If you can't tell how a framework works, don't guess. Mark the
   candidate `not-understood` with the reason, record an unknown with reason
   `unsupported-framework`, and list it under "Needs checking".

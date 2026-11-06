@@ -108,3 +108,19 @@ test("no skill file links into the internal folder", () => {
     assert.doesNotMatch(read(f), /\.local\//, `${f} names .local/`);
   }
 });
+
+test("SKILL.md's secret file list matches what detect.mjs never opens", () => {
+  const text = read("SKILL.md");
+  const names = [
+    ".env", ".env.*", "*.pem", "*.key", "*.p12", "*.pfx", "*.kdbx",
+    "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
+    ".netrc", ".npmrc", ".pypirc", ".pgpass", ".ssh/", '"secret"', '"credential"',
+  ];
+  for (const n of names) assert.ok(text.includes(n), `SKILL.md does not list ${n}`);
+});
+
+test("no note calls a single fixed model call an agent", () => {
+  for (const f of markdownFiles()) {
+    assert.doesNotMatch(read(f), /even with no tools|kind agent\), but the model chooses nothing|kind agent, that chooses nothing/, f);
+  }
+});

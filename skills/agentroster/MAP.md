@@ -67,8 +67,9 @@ If your own search finds one of these ecosystems that the script missed, load it
 that picks which helper runs next, a model that decides when it is done. A workflow runs model
 calls along paths the code fixes: a chain, a fixed graph, a branch the code takes on the model's
 answer. Quote the line that decided it (the tool loop's check, the edge list, the fixed call
-order). A single model step with its own job is an agent card, even with no tools; it reports to
-the workflow when a pipeline runs it.
+order). A single model call that the code runs at a fixed point (no tool loop, the model picks
+nothing) is kind `workflow`. It gets its own card when it has its own job, and that card reports
+to the pipeline's workflow card when a pipeline runs it.
 
 **Ids.** Lower case, words joined by hyphens, from the name the code or its prompt uses (a class,
 function, file, `name` field or the role in the prompt), for example `ticket-triage`. Each id is
@@ -89,8 +90,8 @@ These hold for any project.
   config or code makes the route clear. Otherwise they link to every agent that uses the client.
 - **A trigger is not input.** A schedule, a webhook or an HTTP route that starts an agent belongs
   with how it runs, not with what it reads.
-- **A handoff** is recorded only where one carded step passes work straight to another. Plain code
-  in between that changes or decides the work breaks the link.
+- **A handoff** is recorded only where one carded step passes work straight to another. Any plain
+  code in between breaks the link.
 - **Saving output is not memory.** Memory needs the agent to read its past runs back.
 - **A run-wide budget belongs to the workflow.** A limit inside one agent's loop belongs to that
   agent.
@@ -112,8 +113,9 @@ not it leads to a card.
   MCP config, a hand card) gives one candidate with `line: null`. Each `file` and `line` pair
   appears once.
 - **Add candidates, never remove the script's.** Every candidate in `detect.json` goes into
-  `coverage.json` with its `file`, `line`, `signals` and `detail` unchanged and
-  `found_by: "script"`. If the script flagged a place that is not an agent, keep it and give it
+  `coverage.json` with its `file`, `line`, `signals` and `detail` unchanged. Drop its
+  `ecosystems` field: the coverage format allows no extra fields. Add `status`, `reason`,
+  `outcome`, `cards`, `note`, `found_by: "script"` and `validation`. If the script flagged a place that is not an agent, keep it and give it
   outcome `no-agent` with a note saying why. Places you find are added with
   `found_by: "agent"`, a `signals` list (`llm-import`, `llm-call`, `prompt-file`, `other`, …) and
   a short `detail`.
@@ -140,8 +142,10 @@ roster file with several).
 - Its values win over what the code shows. Where the code disagrees, say so in `map.md` under
   that agent, with both places.
 - Its evidence comes first (`found_by: "hand"`), with the code evidence alongside.
-- A hand card with no matching code still gets its id in the inventory; mark its candidate
-  `needs-checking` and say "no code found for this card" under "Needs checking".
+- A hand card with no matching code still gets its id in the inventory. Its candidate (the
+  `*.roster.json` file) has `outcome: "cards"`, `cards: [<its id>]` and
+  `validation.status: "needs-checking"`, so the ids in `map.md` and `coverage.json` agree. Say
+  "no code found for this card" under "Needs checking".
 
 ## 7. Unknowns
 

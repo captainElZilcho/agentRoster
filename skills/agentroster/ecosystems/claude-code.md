@@ -52,7 +52,8 @@ permission. `hooks` run commands on events such as `PreToolUse`; record them as 
 - **A skill with `context: fork`** runs in a subagent of its own with the skill as its prompt. If
   it has its own job, it is an agent card; quote the `context` line.
 - **A hook of type `prompt` or `agent`** asks a model to decide. If it has its own job (for
-  example a gate that approves or blocks), it is an agent card.
+  example a gate that approves or blocks), it gets a card: a `prompt` hook is one fixed call,
+  kind `workflow`; an `agent` hook runs its own tool loop, kind `agent`.
 - **Scripts that run `claude -p` in a fixed order** (in CI or shell scripts) are a workflow; each
   run with its own prompt is a card that reports to it.
 

@@ -47,7 +47,8 @@ packages such as `langchain_anthropic` and `langchain_openai`. JavaScript: `@lan
 - **Workflow:** a graph whose edges the code fixes: `add_edge` chains, and conditional edges
   routed by a plain function on the state. Quote the edges. The compiled graph is the workflow
   card; each node that calls a model with its own job is a card that reports to it.
-- A chain `prompt | model | parser` is one model step: one card.
+- A chain `prompt | model | parser` is one model step at a fixed point: one card, kind
+  `workflow` (the model picks nothing).
 - A whole graph used as a node in another graph (a subgraph) reports to the outer graph.
 
 ## Traps
@@ -56,7 +57,7 @@ packages such as `langchain_anthropic` and `langchain_openai`. JavaScript: `@lan
 - **One model object, several nodes:** the model is not an agent. Each node with its own prompt
   is one card; the same node function added twice is one.
 - **A router that asks the model** for a label, then a plain function maps the label to an edge:
-  the router node is an agent card; the graph is a workflow.
+  the router node is its own card, kind `workflow` (one fixed call); the graph is a workflow.
 - **Imports alone:** `langchain_core` message types, text splitters, document loaders or
   embeddings (`OpenAIEmbeddings`) are not agents. An unused import is `no-agent`.
 - **Prompts in YAML or Python modules** imported by the graph file: follow them and record each

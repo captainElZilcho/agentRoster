@@ -41,8 +41,9 @@ OpenAI. The OpenAI Agents SDK is a separate package; see the end of this note.
   a tool call. Quote that check.
 - **Workflow:** calls with different prompts in a fixed order, or a branch the code takes on the
   answer. Each call with its own job is a card that reports to the workflow card.
-- A call with `response_format` or `.parse` and no tools is a single structured step: a card,
-  kind agent, that chooses nothing.
+- **One `chat.completions.create` or `responses.create` call with no tool loop** (including
+  `response_format` or `.parse` for structured output) is kind `workflow`: the model chooses
+  nothing. It is its own card when it has its own job.
 
 ## Traps
 

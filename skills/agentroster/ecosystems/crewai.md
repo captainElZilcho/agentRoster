@@ -40,10 +40,11 @@ with tools in `crewai_tools` or `crewai.tools`.
 - **A crew with `process=Process.sequential`** (the default) runs tasks in a fixed order: the
   crew is a workflow card, and its agents report to it. Quote the `process=` line, or the `Crew(`
   call if it is left out.
-- **A crew with `process=Process.hierarchical`** has a manager model that picks who does what:
-  the manager is an agent (orchestrator). If the code gives only `manager_llm`, the manager is
-  still a model step with its own job; card it and say its prompt is CrewAI's built-in one
-  (unknown, `other`). If it gives `manager_agent`, that agent is the manager.
+- **A crew with `process=Process.hierarchical`** has a manager model that picks which agent works
+  next: the crew card is kind `agent` (type orchestrator), and its agents still report to it.
+  Quote the `process=` line. If the code gives only `manager_llm`, the manager's prompt is
+  CrewAI's built-in one: record it as unknown (`other`). If it gives `manager_agent`, that
+  agent's definition is the manager's.
 - **A Flow** runs steps along fixed paths: a workflow card. A `@router` that returns a label
   from plain code is part of the flow; a method that calls a model or kicks off a crew is a step.
 

@@ -43,8 +43,9 @@ JavaScript), plus the Bedrock and Vertex variants.
 - **Workflow:** several `messages.create` calls with different prompts in a fixed order, or a
   branch the code takes on one call's answer. Each call with its own job is a card that reports to
   the workflow card.
-- One call with `tool_choice` forcing a single tool is a structured-output step, not a tool loop.
-  It is a card (kind agent), but the model chooses nothing; say so.
+- **One `messages.create` call with no tool loop** (including one that forces a single tool with
+  `tool_choice` to get structured output) is kind `workflow`: the model chooses nothing. It is
+  its own card when it has its own job.
 
 ## Traps
 

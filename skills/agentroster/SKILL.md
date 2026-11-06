@@ -31,7 +31,8 @@ not built yet. Do not write cards, findings or reports by hand.
 - **Never fetch.** A prompt or setting that comes from a database, a URL, an API or an
   environment variable is recorded as unknown ("loaded from X"). Never fetch it.
 - **Never open secret files:** `.env` and `.env.*` (including `.env.example`), `*.pem`, `*.key`,
-  `*.p12`, `*.pfx`, SSH keys, `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, anything in `.ssh/`, and
+  `*.p12`, `*.pfx`, `*.kdbx`, SSH keys (`id_rsa`, `id_ed25519`, `id_ecdsa`, `id_dsa` and files
+  starting with those names), `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, anything in `.ssh/`, and
   any file whose name has "secret" or "credential" in it.
 - **Never copy a secret.** If a key, token or password turns up in a file you read, cite the file
   and line only. Write `[redacted]` in any quote that would hold it. Env variable names are fine;
@@ -52,8 +53,9 @@ node <skill>/scripts/check-map.mjs <run>
 node <skill>/scripts/redact-check.mjs <run> --project <project>
 ```
 
-Exit codes for all of them: `0` ok, `1` problems found (listed on screen), `2` a file or folder
-could not be used. If `node --version` is missing or below 20, stop and tell the user.
+Exit codes: `0` ok and `2` a file or folder could not be used, for all four. `1` (problems
+found, listed on screen) comes only from `validate-coverage.mjs`, `check-map.mjs` and
+`redact-check.mjs`; `detect.mjs` exits `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
 
 ## Step 1: setup
 
