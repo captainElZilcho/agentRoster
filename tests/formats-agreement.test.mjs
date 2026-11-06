@@ -94,3 +94,36 @@ for (const c of coverageInvalidCases) {
     assert.equal(covValidate(c.doc), !c.schemaOnly, JSON.stringify(covValidate.errors));
   });
 }
+
+// Roster file (envelope only: the card checks run in the validator)
+
+import { invalidCases as rosterInvalidCases } from "./fixtures/roster-file/invalid-cases.mjs";
+
+const rfPublished = new URL("../schema/roster-file-0.1.schema.json", import.meta.url);
+const rfShipped = new URL("../skills/agentroster/schema/roster-file-0.1.schema.json", import.meta.url);
+const rfValidDir = new URL("./fixtures/roster-file/valid/", import.meta.url);
+const rfSchema = readJson(rfPublished);
+
+test("shipped roster file schema copy is byte-identical to the published schema", () => {
+  assert.equal(readFileSync(rfShipped, "utf8"), readFileSync(rfPublished, "utf8"));
+});
+
+let rfValidate;
+test("Ajv compiles the roster file schema in strict mode", () => {
+  rfValidate = ajv.compile(rfSchema);
+  assert.equal(typeof rfValidate, "function");
+});
+
+for (const name of readdirSync(rfValidDir).filter((n) => n.endsWith(".json")).sort()) {
+  test(`valid roster file fixture ${name}: checker and Ajv both accept it`, () => {
+    const doc = readJson(new URL(name, rfValidDir));
+    assert.deepEqual(checkSchema(rfSchema, doc), []);
+    assert.equal(rfValidate(doc), true, JSON.stringify(rfValidate.errors));
+  });
+}
+
+for (const c of rosterInvalidCases) {
+  test(`invalid roster file case ${c.name}: Ajv ${c.schemaOnly ? "rejects" : "accepts"} it`, () => {
+    assert.equal(rfValidate(c.doc), !c.schemaOnly, JSON.stringify(rfValidate.errors));
+  });
+}

@@ -19,6 +19,11 @@ Notes that JSON can't hold as comments:
 | [`fleet-scout.roster.json`](fleet-scout.roster.json) | Researcher | Read only, so unattended (L3) is safe; cheap, fast model |
 | [`change-gate.roster.json`](change-gate.roster.json) | Gatekeeper | Approve or deny only; JSON in and out; never approves its own card |
 
+## Roster file
+
+[`roster.example.json`](roster.example.json) holds the three cards above in one `roster.json`, in id
+order, with a run snapshot. The format is in [`spec/roster-file-v0.1.md`](../spec/roster-file-v0.1.md).
+
 ## Findings and coverage
 
 Two files for the same made-up run over the Ops Hub project, in the formats of

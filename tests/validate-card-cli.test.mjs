@@ -77,7 +77,7 @@ test("an error does not stop the other files", () => {
 test("no arguments print usage and exit 2", () => {
   const r = run([]);
   assert.equal(r.status, 2);
-  assert.equal(r.stderr, "usage: validate-card.mjs <card.roster.json> [...]\n");
+  assert.equal(r.stderr, "usage: validate-card.mjs <card.roster.json | roster.json> [...]\n");
 });
 
 test("running through a symlink still validates", () => {
