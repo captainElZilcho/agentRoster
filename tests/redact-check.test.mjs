@@ -390,3 +390,47 @@ for (const [name, args, want] of [
     assert.ok(!r.stdout.includes(want) && !r.stderr.includes(want));
   });
 }
+
+test("JSONC: a trailing comma followed by a comment is read", () => {
+  const root = tmp();
+  put(root, ".vscode/mcp.json", [
+    "{",
+    '  "servers": { "x": {',
+    '    "args": ["a", /* last */ "b", /* end */ ],',
+    '    "env": { "API_TOKEN": "FAKE-jsonc-token-9", // note',
+    "    },",
+    "  }, // done",
+    "  },",
+    "}",
+  ].join("\n"));
+  assert.ok(readConfigValues(root).includes("FAKE-jsonc-token-9"));
+});
+
+test("CLI: linked .env files are counted as not compared, without their contents", () => {
+  const project = tmp();
+  const outside = tmp();
+  const value = "FAKE-linked-env-value";
+  put(outside, "real.env", `A=${value}\n`);
+  put(project, "app.py", "x\n");
+  fs.symlinkSync(path.join(outside, "real.env"), path.join(project, ".env"));
+  fs.mkdirSync(path.join(project, "sub"));
+  fs.symlinkSync(path.join(outside, "real.env"), path.join(project, "sub", ".env.local"));
+  fs.symlinkSync(outside, path.join(project, "linked-folder"));
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, "clean: 1 files\n");
+  assert.equal(r.stderr, "not compared: 2 linked .env files\n");
+  assert.ok(!r.stderr.includes(value));
+});
+
+test("CLI: no linked .env files prints nothing on stderr", () => {
+  const project = tmp();
+  put(project, ".env", "A=FAKE-plain-env-value\n");
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, "");
+});

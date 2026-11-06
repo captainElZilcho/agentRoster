@@ -157,17 +157,21 @@ function findClose(body, quote) {
   return -1;
 }
 
+const isEnvName = (rel) => /^\.env(\..+)?$/i.test(rel.split("/").at(-1));
+
 /**
  * Read the values from .env and .env.* files in a project, to compare in memory only.
  * A file or folder that cannot be read throws (fails closed), with its path in `file`.
+ * Linked .env files are not followed; `report.linkedEnv` gets how many there are.
  * @param {string} projectDir
+ * @param {{linkedEnv?: number}} [report]
  * @returns {string[]} Values of 8 characters or more.
  */
-export function readEnvValues(projectDir) {
+export function readEnvValues(projectDir, report = {}) {
   const values = new Set();
-  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name)).filter((rel) =>
-    /^\.env(\..+)?$/i.test(rel.split("/").at(-1)),
-  );
+  const others = [];
+  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name), others).filter(isEnvName);
+  report.linkedEnv = others.filter((o) => o.kind === "link" && isEnvName(o.path)).length;
   for (const rel of names) {
     let text;
     try {
@@ -183,27 +187,47 @@ export function readEnvValues(projectDir) {
 
 const CONFIG_FILES = /(^|\/)(\.mcp\.json|mcp\.json|\.claude\/settings\.json|\.claude\/settings\.local\.json)$/i;
 
-/** Remove comments and trailing commas that sit outside strings (JSONC to JSON). */
+/** The index just past the closing quote of the JSON string that starts at text[i]. */
+function stringEnd(text, i) {
+  let j = i + 1;
+  while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
+  return j + 1;
+}
+
+/**
+ * JSONC to JSON. Pass 1 removes comments that sit outside strings; pass 2 then removes trailing
+ * commas, so a comma followed by a comment before "}" or "]" goes too.
+ */
 function stripJsonc(text) {
-  let out = "";
-  let i = 0;
-  while (i < text.length) {
+  let bare = "";
+  for (let i = 0; i < text.length; ) {
     const c = text[i];
     if (c === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
-      out += text.slice(i, j + 1);
-      i = j + 1;
+      const j = stringEnd(text, i);
+      bare += text.slice(i, j);
+      i = j;
     } else if (c === "/" && text[i + 1] === "/") {
       while (i < text.length && text[i] !== "\n") i++;
     } else if (c === "/" && text[i + 1] === "*") {
       const end = text.indexOf("*/", i + 2);
       i = end === -1 ? text.length : end + 2;
-      out += " ";
+      bare += " ";
+    } else {
+      bare += c;
+      i++;
+    }
+  }
+  let out = "";
+  for (let i = 0; i < bare.length; ) {
+    const c = bare[i];
+    if (c === '"') {
+      const j = stringEnd(bare, i);
+      out += bare.slice(i, j);
+      i = j;
     } else if (c === ",") {
       let j = i + 1;
-      while (j < text.length && /\s/.test(text[j])) j++;
-      if (text[j] !== "}" && text[j] !== "]") out += c;
+      while (j < bare.length && /\s/.test(bare[j])) j++;
+      if (bare[j] !== "}" && bare[j] !== "]") out += c;
       i++;
     } else {
       out += c;
@@ -326,8 +350,10 @@ export function runRedactCheckCli(args) {
     let configValues = [];
     if (project !== null) {
       current = project;
-      envValues = readEnvValues(project);
+      const report = {};
+      envValues = readEnvValues(project, report);
       configValues = readConfigValues(project);
+      if (report.linkedEnv > 0) console.error(`not compared: ${report.linkedEnv} linked .env files`);
     }
     const leaks = findLeaks(files, envValues, configValues);
     // A link or other odd entry could hide or point at anything, so it fails the run.
