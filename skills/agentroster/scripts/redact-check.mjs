@@ -68,9 +68,11 @@ export function findLeaks(files, envValues, configValues = []) {
  * A folder that cannot be read throws an error that carries its path in `file`.
  * @param {string} root
  * @param {(name: string) => boolean} skipFolder
+ * @param {Array<{path: string, kind: "link" | "not a regular file"}>} [others] Receives each
+ *   link and each entry that is neither a file nor a folder.
  * @returns {string[]} Paths relative to root, with "/" separators, sorted.
  */
-function walk(root, skipFolder = () => false) {
+function walk(root, skipFolder = () => false, others = []) {
   const found = [];
   const visit = (dir, prefix) => {
     let entries;
@@ -81,16 +83,20 @@ function walk(root, skipFolder = () => false) {
       throw err;
     }
     for (const entry of entries) {
-      if (entry.isSymbolicLink()) continue;
       const rel = prefix + entry.name;
-      if (entry.isDirectory()) {
+      if (entry.isSymbolicLink()) {
+        others.push({ path: rel, kind: "link" });
+      } else if (entry.isDirectory()) {
         if (!skipFolder(entry.name)) visit(path.join(dir, entry.name), rel + "/");
       } else if (entry.isFile()) {
         found.push(rel);
+      } else {
+        others.push({ path: rel, kind: "not a regular file" });
       }
     }
   };
   visit(root, "");
+  others.sort((a, b) => compareText(a.path, b.path));
   return found.sort(compareText);
 }
 
@@ -309,7 +315,8 @@ export function runRedactCheckCli(args) {
     const st = lstatSync(runDir);
     if (st.isSymbolicLink()) throw new CliError(`cannot read ${runDir} (is a link)`);
     if (!st.isDirectory()) throw new CliError(`cannot read ${runDir} (is not a folder)`);
-    const names = walk(runDir);
+    const odd = [];
+    const names = walk(runDir, () => false, odd);
     const files = [];
     for (const rel of names) {
       current = path.join(runDir, rel);
@@ -323,9 +330,11 @@ export function runRedactCheckCli(args) {
       configValues = readConfigValues(project);
     }
     const leaks = findLeaks(files, envValues, configValues);
+    // A link or other odd entry could hide or point at anything, so it fails the run.
+    for (const o of odd) console.log(`leak: ${o.path} (${o.kind})`);
     for (const l of leaks) console.log(`leak: ${l.file}:${l.line} (${l.kind})`);
-    if (leaks.length > 0) {
-      console.log(`leaks: ${leaks.length}`);
+    if (odd.length + leaks.length > 0) {
+      console.log(`leaks: ${odd.length + leaks.length}`);
       return 1;
     }
     console.log(`clean: ${names.length} files`);

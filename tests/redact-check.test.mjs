@@ -130,16 +130,29 @@ test("CLI: usage error gives exit 2", () => {
   assert.match(r.stderr, /usage: redact-check\.mjs/);
 });
 
-test("CLI: symbolic links in the run folder are not followed", () => {
+test("CLI: a link in the run folder is a failure, and it is not followed", () => {
   const dir = tmp();
   const outside = tmp();
   put(outside, "leak.md", shapes["sk-"]);
   put(dir, "map.md", "fine\n");
   fs.symlinkSync(outside, path.join(dir, "linkdir"));
   fs.symlinkSync(path.join(outside, "leak.md"), path.join(dir, "linkfile.md"));
+  fs.mkdirSync(path.join(dir, "cards"));
+  fs.symlinkSync(path.join(outside, "leak.md"), path.join(dir, "cards", "a.md"));
   const r = run(dir);
-  assert.equal(r.status, 0);
-  assert.equal(r.stdout, "clean: 1 files\n");
+  assert.equal(r.status, 1);
+  assert.equal(r.stdout, "leak: cards/a.md (link)\nleak: linkdir (link)\nleak: linkfile.md (link)\nleaks: 3\n");
+  assert.ok(!r.stdout.includes("secret-shaped"));
+});
+
+test("CLI: a named pipe in the run folder is a failure", () => {
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const made = spawnSync("mkfifo", [path.join(dir, "pipe")]);
+  if (made.status !== 0) return;
+  const r = run(dir);
+  assert.equal(r.status, 1);
+  assert.equal(r.stdout, "leak: pipe (not a regular file)\nleaks: 1\n");
 });
 
 test("CLI: files named like secrets and git-ignored run folders are still scanned", () => {
