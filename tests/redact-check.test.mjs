@@ -356,3 +356,24 @@ test("secrets passed as MCP args are collected", () => {
     assert.equal(r.stdout, "leak: map.md:1 (value from config)\nleaks: 1\n");
   }
 });
+
+const argsConfig = (args) => JSON.stringify({ mcpServers: { x: { command: "npx", args } } });
+
+for (const [name, args, want] of [
+  ["--header then a bearer token", ["-y", "mcp-remote", "--header", "Authorization: Bearer FAKE-hdr-tok-1"], "FAKE-hdr-tok-1"],
+  ["--header=Authorization: Bearer", ["mcp-remote", "--header=Authorization: Bearer FAKE-hdr-tok-2"], "FAKE-hdr-tok-2"],
+  ["a token in a URL query (?api_key=)", ["mcp-remote", "https://example.test/mcp?api_key=FAKE-url-key-3&x=1"], "FAKE-url-key-3"],
+  ["a token in a URL query (&TOKEN=)", ["mcp-remote", "https://example.test/mcp?a=1&TOKEN=FAKE-url-tok-4#part"], "FAKE-url-tok-4"],
+]) {
+  test(`MCP args: ${name} is collected and found`, () => {
+    const root = tmp();
+    put(root, ".mcp.json", argsConfig(args));
+    assert.ok(readConfigValues(root).includes(want), want);
+    const dir = tmp();
+    put(dir, "map.md", `ran with ${want}\n`);
+    const r = run(dir, "--project", root);
+    assert.equal(r.status, 1);
+    assert.equal(r.stdout, "leak: map.md:1 (value from config)\nleaks: 1\n");
+    assert.ok(!r.stdout.includes(want) && !r.stderr.includes(want));
+  });
+}

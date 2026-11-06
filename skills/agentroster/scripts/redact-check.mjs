@@ -207,15 +207,24 @@ function stripJsonc(text) {
   return out;
 }
 
-const SECRET_WORDS = /key|token|secret|password|auth/i;
+const SECRET_WORDS = /key|token|secret|password|auth|header/i;
+const QUERY_SECRET = /[?&](?:key|api_key|apikey|token|access_token|secret|password|auth)=([^&#]+)/gi;
 
-/** Collect secrets passed as command arguments: "--api-key VALUE" and "--token=VALUE". */
+/**
+ * Collect secrets passed as command arguments: "--api-key VALUE", "--token=VALUE",
+ * "--header 'Authorization: Bearer VALUE'", and "?api_key=VALUE" in a URL.
+ */
 function collectArgs(args, out) {
   args.forEach((arg, i) => {
     if (typeof arg !== "string") return;
     const eq = /^--?([^=\s]+)=(.*)$/s.exec(arg);
     if (eq && SECRET_WORDS.test(eq[1])) out.add(eq[2]);
     else if (SECRET_WORDS.test(arg) && typeof args[i + 1] === "string") out.add(args[i + 1]);
+    if (SECRET_WORDS.test(arg)) {
+      const cut = Math.max(arg.lastIndexOf(" "), arg.lastIndexOf(":"), arg.lastIndexOf("="));
+      if (cut !== -1) out.add(arg.slice(cut + 1).trim());
+    }
+    for (const m of arg.matchAll(QUERY_SECRET)) out.add(m[1]);
   });
 }
 
