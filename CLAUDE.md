@@ -56,14 +56,14 @@ project names, secrets or the maintainer's notes? Then it is internal and goes i
 | Kind of file | Location | Public |
 |---|---|---|
 | Card standard (versioned drafts) | `spec/roster-card-standard-vX.Y.md` | yes |
-| Run file formats (versioned drafts) | `spec/findings-and-coverage-vX.Y.md`, `spec/roster-file-vX.Y.md` | yes |
-| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json`, `schema/coverage-X.Y.schema.json`, `schema/roster-file-X.Y.schema.json` | yes |
+| Run file formats (versioned drafts) | `spec/findings-and-coverage-vX.Y.md`, `spec/coverage-vX.Y.md`, `spec/roster-file-vX.Y.md` | yes |
+| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json`, `schema/coverage-X.Y.schema.json` (0.1 and 0.2), `schema/roster-file-X.Y.schema.json` | yes |
 | Example roster cards | `examples/*.roster.json` (generic agents only) | yes |
 | Product design, step designs and research | `.local/docs/` (`product-vX.Y.md`, `design-stepN-<topic>.md`, `research.md`) | no (internal) |
 | Decisions | `.local/docs/decisions.md` (new ADR, never delete) | no (internal) |
 | Roadmap | `.local/docs/roadmap.md` | no (internal) |
 | Implementation plans | `.local/plans/YYYY-MM-DD-<topic>-plan.md` | no (internal) |
-| The skill (the product) | `skills/agentroster/`: `SKILL.md`, phase files, `checks/<pack>/` (`CHECKS.md`, `checks.json`), `schema/` (copies), `scripts/*.mjs`, `templates/`, `references/` | yes |
+| The skill (the product) | `skills/agentroster/`: `SKILL.md`, phase files, `ecosystems/` (notes and `patterns.json`), `checks/<pack>/` (`CHECKS.md`, `checks.json`), `schema/` (copies), `scripts/*.mjs`, `templates/`, `references/` | yes |
 | Package file | `package.json` (no runtime dependencies) | yes |
 | Tests and golden fixtures | `tests/`, `tests/fixtures/` (synthetic projects only; no real configs, no secrets) | yes |
 | Generated output, run folders | `out/`, `.agentroster/` | no (git-ignored) |

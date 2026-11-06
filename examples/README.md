@@ -36,6 +36,10 @@ Two files for the same made-up run over the Ops Hub project, in the formats of
 
 The file paths in them are made up. Both pass their validators.
 
+[`coverage-0.2.example.json`](coverage-0.2.example.json) is the same kind of file in the 0.2
+format, the one the map phase writes (format in [`spec/coverage-v0.2.md`](../spec/coverage-v0.2.md)).
+It passes `validate-coverage.mjs`.
+
 ## How one card could look in the collection
 
 Front (in the grid):
