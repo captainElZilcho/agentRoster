@@ -97,8 +97,10 @@ These hold for any project.
   agent.
 - **A limit stated but not enforced in code** ("keep it under 5 steps" in a prompt) is recorded
   as stated, never as a limit.
-- **Permission comes only from a declared setting** (a permission mode, an allow or deny list),
-  never from what the tools happen to do.
+- **`guardrails.permission` comes only from a declared permission setting:** a permission mode
+  (such as Claude Code's `permissionMode`) or a hand card's permission. Never from what the tools
+  happen to do. A list of allowed or denied tools (`allowedTools`, `tools=`, `tools:`) goes in
+  `tools.allow` / `tools.deny`, never in `permission`.
 - **The job decides the type,** not the agent's name for itself.
 - **The main prompt is the agent's instructions.** A shared skill file appended to it is a skill.
 - **A hand card's value wins** (section 6).

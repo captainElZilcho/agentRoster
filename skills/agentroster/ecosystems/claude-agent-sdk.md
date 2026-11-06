@@ -27,12 +27,14 @@ uses snake_case, TypeScript camelCase):
 - **Tools:** `allowed_tools` / `allowedTools` and `disallowed_tools` / `disallowedTools` (tool
   names such as `Read`, `Bash`, `mcp__<server>__<tool>`), plus `mcp_servers` / `mcpServers`
   (including in-process servers made with `create_sdk_mcp_server` and functions marked `@tool`).
+  The allowed and disallowed lists go in `tools.allow` / `tools.deny`, never in permission.
 - **Model:** `model`. If it is not set, the SDK's default applies; record the model as unknown
   (`other`, "SDK default"), not a guess.
 - **Limits:** `max_turns` / `maxTurns`, and any budget or cost cap the options set.
 - **Permission:** `permission_mode` / `permissionMode` (`default`, `acceptEdits`, `plan`,
-  `bypassPermissions`), and a `can_use_tool` / `canUseTool` callback. This is a declared setting,
-  so it can set `guardrails.permission`.
+  `bypassPermissions`) is the declared permission setting, so it sets `guardrails.permission`.
+  A `can_use_tool` / `canUseTool` callback is code that approves tool use: record it as a
+  guardrail with file and line, not as the permission.
 - **Hooks:** `hooks` run code before or after tool use; record them as guardrails with file and
   line.
 - **Subagents:** `agents`, a map of name to a definition (`AgentDefinition` in Python) with

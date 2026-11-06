@@ -25,17 +25,20 @@ Subagent frontmatter (read the file; only record keys that are there):
 - `name`, `description` (when the main session should use it);
 - `tools`: a comma-separated list of tool names (`Read, Grep, Bash`, `mcp__<server>__<tool>`,
   `Agent(<name>, …)` to limit which subagents it may start). No `tools` key means it gets the
-  main session's tools; record that as written, not as a list;
+  main session's tools; record that as written, not as a list. The list goes in `tools.allow`
+  (and `disallowedTools` in `tools.deny`), never in permission;
 - `model`: `sonnet`, `opus`, `haiku`, a full model id, or `inherit`;
-- `permissionMode` and other keys such as `disallowedTools`, `skills` (skills loaded into it),
+- `permissionMode` (the declared permission setting: it sets `guardrails.permission`) and
+  other keys such as `disallowedTools`, `skills` (skills loaded into it),
   `mcpServers`, `hooks`, `maxTurns` or `memory`, where the file has them.
 
 Skill frontmatter: `name`, `description`, and optional keys such as `allowed-tools`, `model`,
 `context: fork` (run in its own subagent), `agent`, `disable-model-invocation`. The body is the
 skill's instructions.
 
-Settings: `permissions` (`allow`, `deny`, `ask`, `defaultMode`) is a declared setting for
-permission. `hooks` run commands on events such as `PreToolUse`; record them as guardrails.
+Settings: in `permissions`, `defaultMode` is the declared permission mode (it sets
+`guardrails.permission`); the `allow`, `deny` and `ask` rules list tools, so they go in
+`tools.allow` / `tools.deny` (record `ask` rules as needing approval), never in permission. `hooks` run commands on events such as `PreToolUse`; record them as guardrails.
 `model` sets the main session's model. `env` may hold values: never copy them.
 
 ## Agent or workflow
