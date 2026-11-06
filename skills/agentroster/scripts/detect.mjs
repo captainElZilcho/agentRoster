@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { compareText } from "./lib/order.mjs";
 
-/** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"} SkipReason */
+/** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"|"unreadable"} SkipReason */
 
 const DEPENDENCY_DIRS = new Set(["node_modules", ".venv", "venv", "vendor", "__pycache__"]);
 const BUILD_DIRS = new Set(["dist", "build"]);
@@ -16,7 +16,7 @@ const RUN_DIRS = new Set([".agentroster"]);
 function emptyCounts() {
   return {
     ignored: 0, dependencies: 0, build_output: 0, run_folder: 0,
-    secret_file: 0, link: 0, binary: 0, too_large: 0,
+    secret_file: 0, link: 0, binary: 0, too_large: 0, unreadable: 0,
   };
 }
 
@@ -40,11 +40,23 @@ function dirReason(name) {
 function isSecretName(name) {
   const lower = name.toLowerCase();
   return (
-    name === ".env" || name.startsWith(".env.") ||
-    /\.(pem|key|p12|pfx)$/.test(name) ||
-    name.startsWith("id_rsa") || name.startsWith("id_ed25519") ||
+    lower === ".env" || lower.startsWith(".env.") ||
+    /\.(pem|key|p12|pfx|kdbx)$/.test(lower) ||
+    /^id_(rsa|ed25519|ecdsa|dsa)/.test(lower) ||
+    lower === ".netrc" || lower === ".npmrc" || lower === ".pypirc" || lower === ".pgpass" ||
     lower.includes("credential") || lower.includes("secret")
   );
+}
+
+/** Folder names whose contents are secret. */
+const SECRET_DIRS = new Set([".ssh"]);
+
+/** Environment for git: no caller GIT_* variables, no system config. */
+function gitEnv() {
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.startsWith("GIT_")) delete env[k];
+  env.GIT_CONFIG_NOSYSTEM = "1";
+  return env;
 }
 
 /**
@@ -55,8 +67,12 @@ function isSecretName(name) {
  */
 function git(root, args) {
   try {
-    return execFileSync("git", ["-C", root, ...args], {
+    return execFileSync("git", [
+      "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-c", "core.hooksPath=/dev/null",
+      "-C", root, ...args,
+    ], {
       stdio: ["ignore", "pipe", "ignore"],
+      env: gitEnv(),
       maxBuffer: 256 * 1024 * 1024,
     }).toString("utf8");
   } catch {
@@ -72,13 +88,20 @@ function git(root, args) {
  * @param {Record<SkipReason, number>} skipped
  */
 function walk(root, rel, files, skipped) {
-  const entries = fs.readdirSync(path.join(root, rel), { withFileTypes: true });
+  let entries;
+  try {
+    entries = fs.readdirSync(path.join(root, rel), { withFileTypes: true });
+  } catch (err) {
+    if (rel === "") throw err;
+    skipped.unreadable++;
+    return;
+  }
   for (const e of entries) {
     if (e.name === ".git") continue;
     const childRel = rel ? `${rel}/${e.name}` : e.name;
     if (e.isSymbolicLink()) { skipped.link++; continue; }
     if (e.isDirectory()) {
-      const why = dirReason(e.name);
+      const why = SECRET_DIRS.has(e.name.toLowerCase()) ? "secret_file" : dirReason(e.name);
       if (why) skipped[why]++;
       else walk(root, childRel, files, skipped);
     } else if (e.isFile()) {
@@ -91,7 +114,10 @@ function walk(root, rel, files, skipped) {
 /**
  * List the files a scan may read, relative to `root`, with counts of what was skipped.
  * Uses git when `root` is inside a work tree (so ignored files stay out), else walks the folder.
- * Throws the system error (code kept) if the folder is missing or unreadable.
+ * Throws the system error (code kept) if `root` is missing or unreadable; an unreadable nested folder is
+ * counted as `unreadable`. Count units: in the walk a skipped folder counts once; in git mode skip reasons
+ * count per file and `ignored` counts git's `--directory` entries.
+ * Callers must open listed files without following links (a link may replace a file after listing).
  * @param {string} root
  * @returns {{files: string[], skipped: Record<SkipReason, number>}}
  */
@@ -109,13 +135,19 @@ export function listFiles(root) {
       for (const p of new Set(split(listed))) {
         const segs = p.split("/");
         if (segs.includes(".git")) continue;
-        const why = segs.slice(0, -1).map(dirReason).find(Boolean);
+        const why = segs.slice(0, -1)
+          .map((n) => (SECRET_DIRS.has(n.toLowerCase()) ? "secret_file" : dirReason(n))).find(Boolean);
         if (why) { skipped[why]++; continue; }
         if (isSecretName(segs[segs.length - 1])) { skipped.secret_file++; continue; }
-        let st;
-        try { st = fs.lstatSync(path.join(root, p)); } catch { continue; }
-        if (st.isSymbolicLink()) { skipped.link++; continue; }
-        if (st.isFile()) files.push(p);
+        // Every part of the path must be a real entry: a linked parent folder could lead outside root.
+        let st = null;
+        let linked = false;
+        for (let i = 1; i <= segs.length && !linked; i++) {
+          try { st = fs.lstatSync(path.join(root, ...segs.slice(0, i))); } catch { st = null; break; }
+          if (st.isSymbolicLink()) linked = true;
+        }
+        if (linked) { skipped.link++; continue; }
+        if (st && st.isFile()) files.push(p);
       }
       files.sort(compareText);
       return { files, skipped };
