@@ -95,7 +95,8 @@ export const invalidCases = [
     `does not match the candidates and unknowns; expected ${typicalSummary}`),
 
   // schema
-  schema("coverage-version", t((d) => { d.coverage = "1"; }), "/coverage", 'must be the string "0.1"'),
+  // Since coverage 0.2 the validator picks the schema by version, so an unknown version gets this message.
+  schema("coverage-version", t((d) => { d.coverage = "1"; }), "/coverage", 'must be "0.1" or "0.2"'),
   schema("status-skipped", t((d) => { d.candidates[0].status = "skipped"; }), at(0, "status"),
     '"skipped" is not one of read, not-read, not-understood'),
   schema("signals-empty", t((d) => { d.candidates[0].signals = []; }), at(0, "signals"),

@@ -41,3 +41,15 @@ test("examples/roster.example.json cards equal the *.roster.json examples, sorte
   const file = JSON.parse(read("../examples/roster.example.json"));
   assert.deepEqual(file.cards, singles);
 });
+
+const cov2SpecBlocks = [...read("../spec/coverage-v0.2.md").matchAll(/```json\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
+
+test("examples/coverage-0.2.example.json is valid", () => {
+  assert.deepEqual(validateCoverage(JSON.parse(read("../examples/coverage-0.2.example.json"))), { valid: true, errors: [] });
+});
+test("the coverage 0.2 spec's example is valid", () => {
+  assert.deepEqual(validateCoverage(cov2SpecBlocks.find((d) => "coverage" in d)), { valid: true, errors: [] });
+});
+test("the coverage 0.2 spec's example equals examples/coverage-0.2.example.json", () => {
+  assert.deepEqual(cov2SpecBlocks.find((d) => "coverage" in d), JSON.parse(read("../examples/coverage-0.2.example.json")));
+});

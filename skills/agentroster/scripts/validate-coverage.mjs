@@ -1,14 +1,16 @@
 // Checks a coverage.json file: the schema first, then the rules the schema
 // cannot express (reason, outcome, cards and note by status, order, summary).
+// Versions 0.1 and 0.2 are both accepted; the file's "coverage" key picks the schema.
 
 import { readFileSync } from "node:fs";
 import { checkSchema } from "./lib/schema-check.mjs";
 import { runValidatorCli, isEntryPoint } from "./lib/cli.mjs";
 import { compareText, canonicalJson, keySortedJson } from "./lib/order.mjs";
 
-const schema = JSON.parse(
-  readFileSync(new URL("../schema/coverage-0.1.schema.json", import.meta.url), "utf8"),
-);
+const loadSchema = (version) =>
+  JSON.parse(readFileSync(new URL(`../schema/coverage-${version}.schema.json`, import.meta.url), "utf8"));
+
+const schemas = { "0.1": loadSchema("0.1"), "0.2": loadSchema("0.2") };
 
 /** Candidate key as shown in messages: "file:line", with `*` for a whole file. */
 const candidateKey = (c) => `${c.file}:${c.line === null ? "*" : c.line}`;
@@ -27,8 +29,9 @@ const unknownKey = (u) => `${u.card}.${u.field}`;
 const compareUnknowns = (a, b) => compareText(a.card, b.card) || compareText(a.field, b.field);
 
 /** The summary the lists imply (spec 4.3), keys in the documented order. */
-function expectedSummary(candidates, unknowns) {
+function expectedSummary(candidates, unknowns, version) {
   const count = (pred) => candidates.filter(pred).length;
+  const needsChecking = version === "0.2" ? { needs_checking: count((c) => c.validation.status === "needs-checking") } : {};
   return {
     candidates: candidates.length,
     read: count((c) => c.status === "read"),
@@ -36,6 +39,7 @@ function expectedSummary(candidates, unknowns) {
     not_understood: count((c) => c.status === "not-understood"),
     cards: new Set(candidates.flatMap((c) => c.cards)).size,
     no_agent: count((c) => c.outcome === "no-agent"),
+    ...needsChecking,
     unknowns: unknowns.length,
   };
 }
@@ -101,7 +105,11 @@ function checkList(list, base, key, compare, noun) {
  * @returns {{valid: boolean, errors: Array<{path: string, message: string}>}}
  */
 export function validateCoverage(doc) {
-  const schemaErrors = checkSchema(schema, doc);
+  const version = doc !== null && typeof doc === "object" ? /** @type {any} */ (doc).coverage : undefined;
+  if (version !== "0.1" && version !== "0.2") {
+    return { valid: false, errors: [{ path: "/coverage", message: 'must be "0.1" or "0.2"' }] };
+  }
+  const schemaErrors = checkSchema(schemas[version], doc);
   if (schemaErrors.length > 0) return { valid: false, errors: schemaErrors };
 
   const errors = [];
@@ -109,7 +117,7 @@ export function validateCoverage(doc) {
   errors.push(...checkList(doc.candidates, "/candidates", candidateKey, compareCandidates, "candidate"));
   errors.push(...checkList(doc.unknowns, "/unknowns", unknownKey, compareUnknowns, "unknown"));
 
-  const expected = expectedSummary(doc.candidates, doc.unknowns);
+  const expected = expectedSummary(doc.candidates, doc.unknowns, version);
   if (keySortedJson(doc.summary) !== keySortedJson(expected)) {
     errors.push({
       path: "/summary",

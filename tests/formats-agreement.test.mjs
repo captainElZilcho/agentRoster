@@ -95,6 +95,39 @@ for (const c of coverageInvalidCases) {
   });
 }
 
+// Coverage 0.2
+
+import { invalidCases as coverage02InvalidCases } from "./fixtures/coverage-0.2/invalid-cases.mjs";
+
+const cov2Published = new URL("../schema/coverage-0.2.schema.json", import.meta.url);
+const cov2Shipped = new URL("../skills/agentroster/schema/coverage-0.2.schema.json", import.meta.url);
+const cov2ValidDir = new URL("./fixtures/coverage-0.2/valid/", import.meta.url);
+const cov2Schema = readJson(cov2Published);
+
+test("shipped coverage 0.2 schema copy is byte-identical to the published schema", () => {
+  assert.equal(readFileSync(cov2Shipped, "utf8"), readFileSync(cov2Published, "utf8"));
+});
+
+let cov2Validate;
+test("Ajv compiles the coverage 0.2 schema in strict mode", () => {
+  cov2Validate = ajv.compile(cov2Schema);
+  assert.equal(typeof cov2Validate, "function");
+});
+
+for (const name of readdirSync(cov2ValidDir).filter((n) => n.endsWith(".json")).sort()) {
+  test(`valid coverage 0.2 fixture ${name}: checker and Ajv both accept it`, () => {
+    const doc = readJson(new URL(name, cov2ValidDir));
+    assert.deepEqual(checkSchema(cov2Schema, doc), []);
+    assert.equal(cov2Validate(doc), true, JSON.stringify(cov2Validate.errors));
+  });
+}
+
+for (const c of coverage02InvalidCases) {
+  test(`invalid coverage 0.2 case ${c.name}: Ajv ${c.schemaOnly ? "rejects" : "accepts"} it`, () => {
+    assert.equal(cov2Validate(c.doc), !c.schemaOnly, JSON.stringify(cov2Validate.errors));
+  });
+}
+
 // Roster file (envelope only: the card checks run in the validator)
 
 import { invalidCases as rosterInvalidCases } from "./fixtures/roster-file/invalid-cases.mjs";
