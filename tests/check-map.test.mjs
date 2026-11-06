@@ -104,3 +104,39 @@ test("CLI exit codes", () => {
   }
   assert.equal(spawnSync(process.execPath, [script], { encoding: "utf8" }).status, 2);
 });
+
+test("a folder where map.md should be gives plain words", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    fs.mkdirSync(path.join(dir, "map.md"));
+    const r = run(dir);
+    assert.equal(r.status, 2);
+    assert.equal(r.stderr.trim(), `cannot read ${path.join(dir, "map.md")} (is a folder)`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("duplicate heading for one id", () => {
+  const r = check("ok", (m) => m.replace("## Flow", "### `scout`\n\nAgain.\n\n## Flow"));
+  assert.deepEqual(r.errors, ['id "scout" has two headings under "Agents and workflows"']);
+});
+
+test("a ~~~ fence hides a ## line", () => {
+  assert.equal(check("ok", (m) => m.replace("## Skipped", "~~~\n## Flow\n~~~\n\n## Skipped")).valid, true);
+});
+
+test("a closing ## on a heading is accepted", () => {
+  assert.equal(check("ok", (m) => m.replace("## Summary", "## Summary ##")).valid, true);
+});
+
+test("inventory id without backticks", () => {
+  const r = check("ok", (m) => m.replace("| `scout` | agent |", "| scout | agent |"));
+  assert.ok(r.errors.some((e) => /the id must be in backticks/.test(e)));
+});
+
+test("CLI prints problems on stdout, not stderr", () => {
+  const r = run("tests/fixtures/map/bad-order");
+  assert.match(r.stdout, /section "Flow" is out of order/);
+  assert.equal(r.stderr, "");
+});

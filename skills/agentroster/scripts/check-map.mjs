@@ -128,7 +128,11 @@ export function checkMap(mapText, coverage) {
 
   const covered = new Set((coverage.candidates ?? []).flatMap((c) => c.cards ?? []));
   const headings = find("Agents and workflows");
-  const headed = new Set(headings ? headingIds(headings) : []);
+  const headingList = headings ? headingIds(headings) : [];
+  const headed = new Set(headingList);
+  for (const id of [...new Set(headingList.filter((x, i) => headingList.indexOf(x) !== i))].sort(compareText)) {
+    errors.push(`id "${id}" has two headings under "Agents and workflows"`);
+  }
 
   if (inventorySection) {
     for (const id of [...seen].sort(compareText)) {
@@ -157,7 +161,7 @@ export function checkMap(mapText, coverage) {
 class CliError extends Error {}
 
 const reason = (err) =>
-  err?.code === "ENOENT" ? "not found" : err?.code === "EACCES" || err?.code === "EPERM" ? "no permission" : (err?.code ?? "error");
+  err?.code === "ENOENT" ? "not found" : err?.code === "EACCES" || err?.code === "EPERM" ? "no permission" : err?.code === "EISDIR" ? "is a folder" : "unreadable";
 
 const readText = (file) => {
   try {
@@ -199,7 +203,7 @@ export function runCheckMapCli(args) {
     for (const e of result.errors) console.log(e);
     return 1;
   } catch (err) {
-    console.error(err instanceof CliError ? err.message : `error: ${err?.code ?? "unexpected failure"}`);
+    console.error(err instanceof CliError ? err.message : "error: unexpected failure");
     return 2;
   }
 }
