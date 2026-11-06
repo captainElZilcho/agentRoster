@@ -121,6 +121,11 @@ not it leads to a card.
   outcome `no-agent` with a note saying why. Places you find are added with
   `found_by: "agent"`, a `signals` list (`llm-import`, `llm-call`, `prompt-file`, `other`, …) and
   a short `detail`.
+- **When the agent search adds a candidate.** Add one for a model call only in a file that has no
+  candidate yet (for example a call through a homemade wrapper, or a plain HTTP call). In a file
+  that already has a candidate, an agent-definition or call line (`Agent(...)`, `Crew(...)`,
+  `query(...)`, `graph.add_node(...)`) is recorded as evidence on the card, not as a new
+  candidate.
 - **Status and outcome:**
 
 | You… | `status` | `outcome` | `cards` | `note` / `reason` |
