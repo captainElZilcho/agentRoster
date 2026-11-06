@@ -231,3 +231,28 @@ test("CLI: a linked run folder is refused", () => {
   assert.equal(r.status, 2);
   assert.equal(r.stderr.trim(), `cannot read ${link} (is a link)`);
 });
+
+test("an unterminated quote does not hide the next line's value", () => {
+  const root = tmp();
+  put(root, ".env", 'A="unterminated\nB=FAKE-next-line-value\n');
+  assert.ok(readEnvValues(root).includes("FAKE-next-line-value"));
+});
+
+test("backslash is literal in single quotes and backticks; unquoted values cut at #", () => {
+  const root = tmp();
+  put(root, ".env", "K='FAKE-ends-in-slash\\'\nL=FAKE-hash-cut#tail\nM=`FAKE-tick-slash\\`\n");
+  const v = readEnvValues(root);
+  assert.ok(v.includes("FAKE-ends-in-slash\\"));
+  assert.ok(v.includes("FAKE-hash-cut"));
+  assert.ok(v.includes("FAKE-tick-slash\\"));
+});
+
+test("escaped or url-encoded text before a key does not hide it", () => {
+  const k = shapes["sk-"];
+  const hit = (t, env = []) => findLeaks([{ path: "a", text: t }], env);
+  assert.deepEqual(hit(`{"a":"x\\nsk-${k.slice(3)}"}`), [{ file: "a", line: 1, kind: "secret-shaped" }]);
+  assert.equal(hit(`q=%22${k}`).length, 1);
+  assert.equal(hit(`x\\u0022${k}`).length, 1);
+  const v = "FAKE-env-value-9";
+  assert.deepEqual(hit(`a%3D${v.replace("-", "%2D")}`, [v]), [{ file: "a", line: 1, kind: "value from .env" }]);
+});

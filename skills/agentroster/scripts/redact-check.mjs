@@ -24,6 +24,14 @@ const SKIP_FOLDERS = new Set([
   "node_modules", ".venv", "venv", "vendor", "__pycache__", "dist", "build", ".git", ".agentroster",
 ]);
 
+/** A copy of a line with \n \r \t, \uXXXX and %XX escapes decoded. */
+function decodeLine(line) {
+  return line
+    .replace(/\\([nrt])/g, (_, c) => ({ n: "\n", r: "\r", t: "\t" })[c])
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/%([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
 /**
  * Find secrets in text. Returns places only, never values.
  * @param {Array<{path: string, text: string}>} files
@@ -34,11 +42,13 @@ export function findLeaks(files, envValues) {
   const values = [...new Set(envValues)].filter((v) => v.length >= MIN_ENV_LENGTH);
   const leaks = [];
   for (const file of files) {
-    file.text.replace(/^﻿/, "").split(/\r?\n/).forEach((line, i) => {
-      if (SECRET_SHAPES.some((re) => re.test(line))) {
+    file.text.replace(/^﻿/, "").split(/\r?\n/).forEach((raw, i) => {
+      const decoded = decodeLine(raw);
+      const forms = decoded === raw ? [raw] : [raw, decoded];
+      if (forms.some((line) => SECRET_SHAPES.some((re) => re.test(line)))) {
         leaks.push({ file: file.path, line: i + 1, kind: "secret-shaped" });
       }
-      if (values.some((v) => line.includes(v))) {
+      if (forms.some((line) => values.some((v) => line.includes(v)))) {
         leaks.push({ file: file.path, line: i + 1, kind: "value from .env" });
       }
     });
@@ -88,37 +98,49 @@ function walk(root, skipFolder = () => false) {
 function parseEnv(text) {
   const out = [];
   const lines = text.replace(/^﻿/, "").split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const m = /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*\s*=\s*(.*)$/.exec(lines[i]);
+  const assign = /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*\s*=\s*(.*)$/;
+  // Pass 1: every line on its own, so an open quote cannot hide the lines after it.
+  for (const line of lines) {
+    const m = assign.exec(line);
     if (!m) continue;
     const rest = m[1];
     out.push(rest.trim());
     const quote = rest[0];
     if (quote === '"' || quote === "'" || quote === "`") {
-      let body = rest.slice(1);
-      let j = i;
-      let end = findClose(body, quote);
-      while (end === -1 && quote === '"' && j + 1 < lines.length) {
-        body += "\n" + lines[++j];
-        end = findClose(body, quote);
-      }
+      const end = findClose(rest.slice(1), quote);
       if (end !== -1) {
-        let value = body.slice(0, end);
-        if (quote === '"') value = value.replace(/\\n/g, "\n");
+        const value = unescape(rest.slice(1, 1 + end), quote);
         out.push(value, ...value.split("\n"));
-        i = j;
-        continue;
       }
+    } else {
+      out.push(rest.split(/\s#/)[0].trim(), rest.split("#")[0].trim());
     }
-    out.push(rest.split(/\s#/)[0].trim());
+  }
+  // Pass 2: a double-quoted value that runs over several lines.
+  for (let i = 0; i < lines.length; i++) {
+    const rest = assign.exec(lines[i])?.[1];
+    if (rest === undefined || rest[0] !== '"' || findClose(rest.slice(1), '"') !== -1) continue;
+    let body = rest.slice(1);
+    let end = -1;
+    for (let j = i + 1; end === -1 && j < lines.length; j++) {
+      body += "\n" + lines[j];
+      end = findClose(body, '"');
+    }
+    if (end !== -1) {
+      const value = unescape(body.slice(0, end), '"');
+      out.push(value, ...value.split("\n"));
+    }
   }
   return out;
 }
 
+/** In double quotes a backslash-n is a newline; other quotes keep the text as it is. */
+const unescape = (value, quote) => (quote === '"' ? value.replace(/\\n/g, "\n") : value);
+
 /** Index of the closing quote in `body` (skipping backslash-escaped ones), or -1. */
 function findClose(body, quote) {
   for (let k = 0; k < body.length; k++) {
-    if (body[k] === "\\") k++;
+    if (quote === '"' && body[k] === "\\") k++;
     else if (body[k] === quote) return k;
   }
   return -1;
