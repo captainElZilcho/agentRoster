@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { findLeaks, readEnvValues } from "../skills/agentroster/scripts/redact-check.mjs";
+import { findLeaks, readConfigValues, readEnvValues } from "../skills/agentroster/scripts/redact-check.mjs";
 
 const script = "skills/agentroster/scripts/redact-check.mjs";
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { cwd: process.cwd(), encoding: "utf8" });
@@ -255,4 +255,54 @@ test("escaped or url-encoded text before a key does not hide it", () => {
   assert.equal(hit(`x\\u0022${k}`).length, 1);
   const v = "FAKE-env-value-9";
   assert.deepEqual(hit(`a%3D${v.replace("-", "%2D")}`, [v]), [{ file: "a", line: 1, kind: "value from .env" }]);
+});
+
+const mcp = (token, bearer) => JSON.stringify({
+  mcpServers: { x: { env: { API_TOKEN: token, SHORT: "abc" }, headers: { Authorization: `Bearer ${bearer}` } } },
+});
+
+test("readConfigValues collects env and headers strings from MCP and settings files", () => {
+  const root = tmp();
+  put(root, ".mcp.json", mcp("FAKE-mcp-token-1", "FAKE-bearer-tok-2"));
+  put(root, "sub/.cursor/mcp.json", mcp("FAKE-cursor-tok-3", "FAKE-bearer-tok-4"));
+  put(root, ".claude/settings.local.json", JSON.stringify({ env: { K: "FAKE-settings-tok-5" }, other: "FAKE-not-collected" }));
+  put(root, "node_modules/p/.mcp.json", mcp("FAKE-skipped-tok-6", "FAKE-skipped-tok-7"));
+  const v = readConfigValues(root);
+  for (const want of ["FAKE-mcp-token-1", "FAKE-bearer-tok-2", "Bearer FAKE-bearer-tok-2", "FAKE-cursor-tok-3", "FAKE-bearer-tok-4", "FAKE-settings-tok-5"]) {
+    assert.ok(v.includes(want), want);
+  }
+  assert.ok(!v.some((x) => /skipped|not-collected|^abc$/.test(x)));
+});
+
+test("CLI: a config token copied into a run file is a leak, the value is not printed", () => {
+  for (const [token, bearer] of [["FAKE-mcp-token-1", "FAKE-bearer-tok-2"]]) {
+    for (const copied of [token, bearer]) {
+      const dir = tmp();
+      const project = tmp();
+      put(project, ".mcp.json", mcp(token, bearer));
+      put(dir, "map.md", `x\nsee ${copied} here\n`);
+      const r = run(dir, "--project", project);
+      assert.equal(r.status, 1);
+      assert.equal(r.stdout, "leak: map.md:2 (value from config)\nleaks: 1\n");
+      assert.ok(!r.stdout.includes(copied) && !r.stderr.includes(copied));
+    }
+  }
+});
+
+test("CLI: a short config value is ignored", () => {
+  const dir = tmp();
+  const project = tmp();
+  put(project, ".mcp.json", mcp("FAKE-mcp-token-1", "FAKE-bearer-tok-2"));
+  put(dir, "map.md", "abc\n");
+  assert.equal(run(dir, "--project", project).status, 0);
+});
+
+test("CLI: a broken .mcp.json fails closed", () => {
+  const dir = tmp();
+  const project = tmp();
+  put(dir, "map.md", "fine\n");
+  put(project, ".mcp.json", "{ not json");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 2);
+  assert.equal(r.stderr.trim(), `cannot read ${path.join(project, ".mcp.json")} (not valid JSON)`);
 });

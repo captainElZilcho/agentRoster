@@ -36,10 +36,12 @@ function decodeLine(line) {
  * Find secrets in text. Returns places only, never values.
  * @param {Array<{path: string, text: string}>} files
  * @param {string[]} envValues Values from .env files; ones under 8 characters are ignored.
- * @returns {Array<{file: string, line: number, kind: "secret-shaped" | "value from .env"}>}
+ * @param {string[]} [configValues] Secret values from MCP and settings files.
+ * @returns {Array<{file: string, line: number, kind: "secret-shaped" | "value from .env" | "value from config"}>}
  */
-export function findLeaks(files, envValues) {
+export function findLeaks(files, envValues, configValues = []) {
   const values = [...new Set(envValues)].filter((v) => v.length >= MIN_ENV_LENGTH);
+  const configs = [...new Set(configValues)].filter((v) => v.length >= MIN_ENV_LENGTH);
   const leaks = [];
   for (const file of files) {
     file.text.replace(/^﻿/, "").split(/\r?\n/).forEach((raw, i) => {
@@ -50,6 +52,9 @@ export function findLeaks(files, envValues) {
       }
       if (forms.some((line) => values.some((v) => line.includes(v)))) {
         leaks.push({ file: file.path, line: i + 1, kind: "value from .env" });
+      }
+      if (forms.some((line) => configs.some((v) => line.includes(v)))) {
+        leaks.push({ file: file.path, line: i + 1, kind: "value from config" });
       }
     });
   }
@@ -170,12 +175,54 @@ export function readEnvValues(projectDir) {
   return [...values].sort(compareText);
 }
 
+const CONFIG_FILES = /(^|\/)(\.mcp\.json|mcp\.json|\.claude\/settings\.json|\.claude\/settings\.local\.json)$/i;
+
+/** Collect strings found under "env" or "headers" objects, at any depth. */
+function collectConfig(node, inside, out) {
+  if (typeof node === "string") {
+    if (!inside) return;
+    out.add(node);
+    const space = node.indexOf(" ");
+    if (space !== -1) out.add(node.slice(space + 1).trim());
+  } else if (Array.isArray(node)) {
+    for (const item of node) collectConfig(item, inside, out);
+  } else if (node && typeof node === "object") {
+    for (const [key, value] of Object.entries(node)) {
+      collectConfig(value, inside || key === "env" || key === "headers", out);
+    }
+  }
+}
+
+/**
+ * Read secret values from MCP and Claude Code config files in a project, to compare in memory
+ * only. A file that cannot be read or parsed throws (fails closed), with its path in `file`.
+ * @param {string} projectDir
+ * @returns {string[]} Values of 8 characters or more.
+ */
+export function readConfigValues(projectDir) {
+  const found = new Set();
+  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name)).filter((rel) => CONFIG_FILES.test(rel));
+  for (const rel of names) {
+    const file = path.join(projectDir, rel);
+    let doc;
+    try {
+      doc = JSON.parse(readFileSync(file, "utf8").replace(/^﻿/, ""));
+    } catch (err) {
+      const failure = err instanceof SyntaxError ? Object.assign(new Error("json"), { code: "EJSON" }) : err;
+      failure.file = file;
+      throw failure;
+    }
+    collectConfig(doc, false, found);
+  }
+  return [...found].filter((v) => v.length >= MIN_ENV_LENGTH).sort(compareText);
+}
+
 // Command line
 
 class CliError extends Error {}
 
 const reason = (err) =>
-  err?.code === "ENOENT" ? "not found" : err?.code === "EACCES" || err?.code === "EPERM" ? "no permission" : err?.code === "EISDIR" ? "is a folder" : "unreadable";
+  err?.code === "EJSON" ? "not valid JSON" : err?.code === "ENOENT" ? "not found" : err?.code === "EACCES" || err?.code === "EPERM" ? "no permission" : err?.code === "EISDIR" ? "is a folder" : "unreadable";
 
 /** Read a run file as text. Nothing is skipped: UTF-16 with a mark is decoded, a file with a NUL byte is read as latin1. */
 function readRunText(file) {
@@ -217,11 +264,13 @@ export function runRedactCheckCli(args) {
       files.push({ path: rel, text: readRunText(current) });
     }
     let envValues = [];
+    let configValues = [];
     if (project !== null) {
       current = project;
       envValues = readEnvValues(project);
+      configValues = readConfigValues(project);
     }
-    const leaks = findLeaks(files, envValues);
+    const leaks = findLeaks(files, envValues, configValues);
     for (const l of leaks) console.log(`leak: ${l.file}:${l.line} (${l.kind})`);
     if (leaks.length > 0) {
       console.log(`leaks: ${leaks.length}`);
