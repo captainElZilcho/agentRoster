@@ -177,6 +177,36 @@ export function readEnvValues(projectDir) {
 
 const CONFIG_FILES = /(^|\/)(\.mcp\.json|mcp\.json|\.claude\/settings\.json|\.claude\/settings\.local\.json)$/i;
 
+/** Remove comments and trailing commas that sit outside strings (JSONC to JSON). */
+function stripJsonc(text) {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else if (c === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") i++;
+    } else if (c === "/" && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2);
+      i = end === -1 ? text.length : end + 2;
+      out += " ";
+    } else if (c === ",") {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      if (text[j] !== "}" && text[j] !== "]") out += c;
+      i++;
+    } else {
+      out += c;
+      i++;
+    }
+  }
+  return out;
+}
+
 /** Collect strings found under "env" or "headers" objects, at any depth. */
 function collectConfig(node, inside, out) {
   if (typeof node === "string") {
@@ -206,7 +236,7 @@ export function readConfigValues(projectDir) {
     const file = path.join(projectDir, rel);
     let doc;
     try {
-      doc = JSON.parse(readFileSync(file, "utf8").replace(/^﻿/, ""));
+      doc = JSON.parse(stripJsonc(readFileSync(file, "utf8").replace(/^﻿/, "")));
     } catch (err) {
       const failure = err instanceof SyntaxError ? Object.assign(new Error("json"), { code: "EJSON" }) : err;
       failure.file = file;

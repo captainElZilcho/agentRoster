@@ -306,3 +306,36 @@ test("CLI: a broken .mcp.json fails closed", () => {
   assert.equal(r.status, 2);
   assert.equal(r.stderr.trim(), `cannot read ${path.join(project, ".mcp.json")} (not valid JSON)`);
 });
+
+test("JSONC config files (comments, trailing commas, URLs) are read", () => {
+  const root = tmp();
+  put(root, ".vscode/mcp.json", [
+    "{",
+    "  // a line comment",
+    "  /* a block",
+    "     comment */",
+    '  "servers": { "x": {',
+    '    "url": "https://example.test/a//b",',
+    '    "env": { "API_TOKEN": "FAKE-jsonc-token-1", "Q": "say \\"hi\\" // not a comment FAKE", },',
+    "  }, },",
+    "}",
+  ].join("\n"));
+  const v = readConfigValues(root);
+  assert.ok(v.includes("FAKE-jsonc-token-1"));
+  assert.ok(v.includes('say "hi" // not a comment FAKE'));
+  assert.ok(!v.some((x) => x.includes("example.test")));
+  const dir = tmp();
+  put(dir, "map.md", "token FAKE-jsonc-token-1\n");
+  const r = run(dir, "--project", root);
+  assert.equal(r.stdout, "leak: map.md:1 (value from config)\nleaks: 1\n");
+});
+
+test("CLI: a config file still broken after stripping fails closed", () => {
+  const dir = tmp();
+  const project = tmp();
+  put(dir, "map.md", "fine\n");
+  put(project, ".vscode/mcp.json", '{ // note\n "a": [1, 2,, ] }');
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 2);
+  assert.equal(r.stderr.trim(), `cannot read ${path.join(project, ".vscode", "mcp.json")} (not valid JSON)`);
+});
