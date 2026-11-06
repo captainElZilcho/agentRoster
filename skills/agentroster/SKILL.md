@@ -114,6 +114,10 @@ opens secret files, and never copies a line's text. It writes:
   `build_output`, `run_folder`, `secret_file`, `link`, `binary`, `too_large`, `unreadable`,
   `submodule` (a git submodule or nested repository, counted once; see `MAP.md` section 9).
 
+**If the script read no files** (`candidates` is empty and every file in the scope is counted
+in `skipped`, or the scope has no files), tell the user before going on, with the counts from
+`skipped`. For example: "No files were read: 40 git-ignored, 3 dependencies."
+
 The script is the floor. It finds the common, obvious signs, not everything. If the scope is a
 folder, its paths are relative to that folder: put the folder path in front of each one when you
 write `coverage.json`.

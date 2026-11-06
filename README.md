@@ -54,8 +54,9 @@ Ask your coding agent to use the `agentroster` skill, for example: "Map the agen
 project." It follows [`skills/agentroster/SKILL.md`](skills/agentroster/SKILL.md): it sets up a run
 folder (`.agentroster/run-YYYY-MM-DD-N/`, which must be git-ignored), runs the search script,
 reads the candidates, and writes `detect.json`, `map.md` and `coverage.json`. It never runs your
-project, never edits your files and never copies a secret. It then checks its own output with
-the scripts below and tells you what it found and what it could not see.
+project and never edits your files. It never opens secret files, and it checks its own output
+for secrets before it finishes, using the scripts below. Then it tells you what it found and
+what it could not see.
 
 ### Map scripts
 
@@ -72,8 +73,9 @@ The paths above are this repo's own test fixtures. `detect.mjs` prints to the sc
   model use without running anything. Exit codes: `0` it ran, `2` the folder can't be read.
 - `check-map.mjs <run-dir>` checks `map.md` against `coverage.json`. Exit codes: `0` ok, `1`
   problems (listed), `2` a file can't be read.
-- `redact-check.mjs <run-dir> [--project <dir>]` fails a run that copied a secret. Exit codes:
-  `0` clean, `1` a leak, `2` a file can't be read.
+- `redact-check.mjs <run-dir> [--project <dir>]` fails a run whose output holds secret-shaped
+  text, a value from the project's `.env`, MCP or settings files, or a link. It prints where,
+  never the value. Exit codes: `0` clean, `1` a leak, `2` a file can't be read.
 
 ## The roster card standard
 
