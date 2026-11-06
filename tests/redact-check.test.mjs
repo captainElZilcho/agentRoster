@@ -339,3 +339,20 @@ test("CLI: a config file still broken after stripping fails closed", () => {
   assert.equal(r.status, 2);
   assert.equal(r.stderr.trim(), `cannot read ${path.join(project, ".vscode", "mcp.json")} (not valid JSON)`);
 });
+
+test("secrets passed as MCP args are collected", () => {
+  const root = tmp();
+  put(root, ".mcp.json", JSON.stringify({
+    mcpServers: { x: { command: "npx", args: ["-y", "some-package-name", "--api-key", "FAKE-arg-key-value-1", "--Token=FAKE-arg-token-2", "--verbose=yes-please-ok", "--name=plain-name-value"] } },
+  }));
+  const v = readConfigValues(root);
+  assert.ok(v.includes("FAKE-arg-key-value-1"));
+  assert.ok(v.includes("FAKE-arg-token-2"));
+  assert.ok(!v.some((x) => /some-package-name|^-y$|yes-please|plain-name|--api-key/.test(x)));
+  for (const copied of ["FAKE-arg-key-value-1", "FAKE-arg-token-2"]) {
+    const dir = tmp();
+    put(dir, "map.md", `ran with ${copied}\n`);
+    const r = run(dir, "--project", root);
+    assert.equal(r.stdout, "leak: map.md:1 (value from config)\nleaks: 1\n");
+  }
+});

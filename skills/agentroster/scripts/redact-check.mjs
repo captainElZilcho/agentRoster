@@ -207,18 +207,31 @@ function stripJsonc(text) {
   return out;
 }
 
+const SECRET_WORDS = /key|token|secret|password|auth/i;
+
+/** Collect secrets passed as command arguments: "--api-key VALUE" and "--token=VALUE". */
+function collectArgs(args, out) {
+  args.forEach((arg, i) => {
+    if (typeof arg !== "string") return;
+    const eq = /^--?([^=\s]+)=(.*)$/s.exec(arg);
+    if (eq && SECRET_WORDS.test(eq[1])) out.add(eq[2]);
+    else if (SECRET_WORDS.test(arg) && typeof args[i + 1] === "string") out.add(args[i + 1]);
+  });
+}
+
 /** Collect strings found under "env" or "headers" objects, at any depth. */
-function collectConfig(node, inside, out) {
+function collectConfig(node, inside, out, inArgs = false) {
   if (typeof node === "string") {
     if (!inside) return;
     out.add(node);
     const space = node.indexOf(" ");
     if (space !== -1) out.add(node.slice(space + 1).trim());
   } else if (Array.isArray(node)) {
+    if (inArgs) collectArgs(node, out);
     for (const item of node) collectConfig(item, inside, out);
   } else if (node && typeof node === "object") {
     for (const [key, value] of Object.entries(node)) {
-      collectConfig(value, inside || key === "env" || key === "headers", out);
+      collectConfig(value, inside || key === "env" || key === "headers", out, key === "args");
     }
   }
 }
