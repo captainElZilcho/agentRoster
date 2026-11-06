@@ -1,0 +1,455 @@
+{
+  "roster_file": "0.1",
+  "snapshot": {
+    "id": "run-2026-11-05-1",
+    "taken_at": "2026-11-05T14:30:00Z",
+    "project": "ops-hub",
+    "standard": "0.2",
+    "packs": [
+      {
+        "id": "completeness",
+        "version": "0.1"
+      }
+    ],
+    "mode": "standard",
+    "previous": null
+  },
+  "cards": [
+    {
+      "roster": "0.2",
+      "id": "change-gate",
+      "name": "Change Gate",
+      "kind": "agent",
+      "app": "Ops Hub",
+      "type": "gatekeeper",
+      "secondary": null,
+      "status": "new",
+      "purpose": "Approves or blocks any action that leaves the workspace (container restarts, pushes, messages) against the hub's rules.",
+      "engine": {
+        "model": "claude-opus-5-5",
+        "effort": "high"
+      },
+      "runtime": "Claude Code subagent",
+      "autonomy": "L3",
+      "version": "2026.1",
+      "icon": "🛡️",
+      "definition": null,
+      "ratings": {
+        "ACC": "~90",
+        "CON": "~88",
+        "TOOL": "~70",
+        "PLAN": "unrated",
+        "DISC": "~95",
+        "COMM": "~85",
+        "SPD": "unrated",
+        "EFF": "unrated",
+        "overall": "unrated"
+      },
+      "headline_stats": [
+        "runs",
+        "accepted_rate",
+        "cost_per_run"
+      ],
+      "role": "Reads the proposed action, the requester's card and the rules; returns approve, block or ask-the-user with the rule it applied. Produces no work.",
+      "goals": [
+        "Never let a forbidden action through",
+        "Send anything the rules mark \"ask first\" to the user, every time",
+        "Give the rule behind every decision"
+      ],
+      "persona": null,
+      "instructions": "prompts/change-gate.md",
+      "skills": [
+        {
+          "name": "policy-check",
+          "tag": "security_privacy/policy_enforcement"
+        }
+      ],
+      "tools": {
+        "allow": [
+          "Read",
+          "mcp__opshub__fleet"
+        ],
+        "deny": [
+          "Bash",
+          "Write",
+          "Edit"
+        ],
+        "mcp": [
+          "opshub"
+        ]
+      },
+      "context": [
+        "CLAUDE.md"
+      ],
+      "memory": {
+        "scope": "none",
+        "where": null,
+        "retention": null
+      },
+      "guardrails": {
+        "permission": "approve",
+        "needs_approval": [],
+        "forbidden": [
+          "approve output from its own card",
+          "approve container actions without the user",
+          "approve commits or pushes without the user"
+        ],
+        "data": "internal",
+        "limits": {
+          "turns": 4,
+          "minutes": 1,
+          "usd": 0.1
+        }
+      },
+      "io": {
+        "in": [
+          "json"
+        ],
+        "out": [
+          "json"
+        ],
+        "report": "{decision: approve|block|ask_user, rule, reason}"
+      },
+      "handoffs": {
+        "from": [
+          {
+            "type": "orchestrator"
+          },
+          {
+            "type": "operator"
+          },
+          {
+            "type": "builder"
+          }
+        ],
+        "to": [
+          {
+            "type": "orchestrator"
+          }
+        ]
+      },
+      "org": {
+        "reports_to": "ops-orchestrator",
+        "group": "safety"
+      },
+      "stats": null,
+      "source": {
+        "files": [],
+        "found_by": "hand"
+      },
+      "evidence": {},
+      "provenance": {
+        "author": "AgentRoster examples",
+        "created": "2026-11-01",
+        "changed": "2026-11-01",
+        "license": null,
+        "signature": null
+      },
+      "profiles": [],
+      "extensions": {
+        "org.example.opshub/v1": {
+          "inventory_app": "ops-hub"
+        }
+      }
+    },
+    {
+      "roster": "0.2",
+      "id": "fleet-scout",
+      "name": "Fleet Scout",
+      "kind": "workflow",
+      "app": "Ops Hub",
+      "type": "researcher",
+      "secondary": null,
+      "status": "new",
+      "purpose": "Answers \"what's running, what's wrong, and since when\" from the ops hub's fleet data.",
+      "engine": {
+        "model": "claude-haiku-5-5",
+        "effort": "low"
+      },
+      "runtime": "Claude Code subagent over the hub's MCP server",
+      "autonomy": "L3",
+      "version": "2026.1",
+      "icon": "🔭",
+      "definition": null,
+      "ratings": {
+        "ACC": "~85",
+        "CON": "~80",
+        "TOOL": "~90",
+        "PLAN": "~55",
+        "DISC": "~90",
+        "COMM": "~85",
+        "SPD": "~95",
+        "EFF": "~95",
+        "overall": "unrated"
+      },
+      "headline_stats": [
+        "runs",
+        "accepted_rate",
+        "cost_per_run"
+      ],
+      "role": "Reads fleet state, ports and events through the hub's MCP server and reports them plainly. Never operates containers.",
+      "goals": [
+        "Correct state words and reasons for every app asked about",
+        "Say \"can't judge\" when the data is missing, never guess",
+        "Answer in under 10 seconds"
+      ],
+      "persona": "Calm dispatcher. Short sentences, facts first.",
+      "instructions": "prompts/fleet-scout.md",
+      "skills": [
+        {
+          "name": "fleet-status",
+          "tag": "devops_mlops/monitoring"
+        },
+        {
+          "name": "port-lookup",
+          "tag": "devops_mlops/networking"
+        }
+      ],
+      "tools": {
+        "allow": [
+          "mcp__opshub__fleet",
+          "mcp__opshub__app",
+          "mcp__opshub__ports",
+          "mcp__opshub__events"
+        ],
+        "deny": [
+          "Bash",
+          "Write",
+          "Edit"
+        ],
+        "mcp": [
+          "opshub"
+        ]
+      },
+      "context": [
+        "CLAUDE.md",
+        "docs/status-words.md"
+      ],
+      "memory": {
+        "scope": "none",
+        "where": null,
+        "retention": null
+      },
+      "guardrails": {
+        "permission": "read-only",
+        "needs_approval": [],
+        "forbidden": [
+          "operate containers",
+          "read secrets",
+          "print the hub's API token"
+        ],
+        "data": "internal",
+        "limits": {
+          "turns": 8,
+          "minutes": 2,
+          "usd": 0.05
+        }
+      },
+      "io": {
+        "in": [
+          "text"
+        ],
+        "out": [
+          "text"
+        ],
+        "report": "state word, reason, since, next step if any"
+      },
+      "handoffs": {
+        "from": [
+          {
+            "type": "orchestrator"
+          },
+          {
+            "type": "assistant"
+          }
+        ],
+        "to": [
+          {
+            "type": "orchestrator"
+          },
+          {
+            "type": "operator"
+          }
+        ]
+      },
+      "org": {
+        "reports_to": "ops-orchestrator",
+        "group": "operations"
+      },
+      "stats": null,
+      "source": {
+        "files": [],
+        "found_by": "hand"
+      },
+      "evidence": {},
+      "provenance": {
+        "author": "AgentRoster examples",
+        "created": "2026-11-01",
+        "changed": "2026-11-01",
+        "license": null,
+        "signature": null
+      },
+      "profiles": [],
+      "extensions": {
+        "org.example.opshub/v1": {
+          "inventory_app": "ops-hub"
+        }
+      }
+    },
+    {
+      "roster": "0.2",
+      "id": "ops-orchestrator",
+      "name": "Ops Orchestrator",
+      "kind": "agent",
+      "app": "Ops Hub",
+      "type": "orchestrator",
+      "secondary": null,
+      "status": "new",
+      "purpose": "Turns a request into a need per role, drafts agents from the collection, runs them and reports the result.",
+      "engine": {
+        "model": "claude-opus-5-5",
+        "effort": "high"
+      },
+      "runtime": "Claude Code main agent",
+      "autonomy": "L2",
+      "version": "2026.1",
+      "icon": "🧭",
+      "definition": null,
+      "ratings": {
+        "ACC": "~85",
+        "CON": "~80",
+        "TOOL": "~80",
+        "PLAN": "~90",
+        "DISC": "~85",
+        "COMM": "~88",
+        "SPD": "unrated",
+        "EFF": "unrated",
+        "overall": "unrated"
+      },
+      "headline_stats": [
+        "runs",
+        "accepted_rate",
+        "cost_per_run"
+      ],
+      "role": "Plans and delegates. Does not build, review or operate itself. Follows the team rules in the card standard.",
+      "goals": [
+        "The right card in every role, with a draft record for each pick",
+        "Stay inside the task budget",
+        "Tell the user plainly what was done, by whom, and what is waiting on them"
+      ],
+      "persona": null,
+      "instructions": "prompts/ops-orchestrator.md",
+      "skills": [
+        {
+          "name": "draft",
+          "tag": "agent_orchestration/task_delegation"
+        },
+        {
+          "name": "need-writing",
+          "tag": "agent_orchestration/planning"
+        }
+      ],
+      "tools": {
+        "allow": [
+          "Agent",
+          "Read",
+          "mcp__opshub__fleet"
+        ],
+        "deny": [
+          "Write",
+          "Edit",
+          "Bash"
+        ],
+        "mcp": [
+          "opshub"
+        ]
+      },
+      "context": [
+        "CLAUDE.md",
+        "roster/*.roster.json"
+      ],
+      "memory": {
+        "scope": "project",
+        "where": ".claude/agent-memory/ops-orchestrator/",
+        "retention": "90d"
+      },
+      "guardrails": {
+        "permission": "read-only",
+        "needs_approval": [
+          "drafting an operator",
+          "any team over budget"
+        ],
+        "forbidden": [
+          "doing the work itself",
+          "approving its own team's output"
+        ],
+        "data": "internal",
+        "limits": {
+          "turns": 30,
+          "minutes": 20,
+          "usd": 2
+        }
+      },
+      "io": {
+        "in": [
+          "text"
+        ],
+        "out": [
+          "text",
+          "json"
+        ],
+        "report": "plan, picks with draft records, results, what waits on the user"
+      },
+      "handoffs": {
+        "from": [
+          {
+            "person": "user"
+          }
+        ],
+        "to": [
+          {
+            "type": "researcher"
+          },
+          {
+            "type": "builder"
+          },
+          {
+            "type": "specialist"
+          },
+          {
+            "type": "reviewer"
+          },
+          {
+            "type": "gatekeeper"
+          },
+          {
+            "type": "operator"
+          }
+        ]
+      },
+      "org": {
+        "reports_to": null,
+        "group": null
+      },
+      "stats": null,
+      "source": {
+        "files": [],
+        "found_by": "hand"
+      },
+      "evidence": {},
+      "provenance": {
+        "author": "AgentRoster examples",
+        "created": "2026-11-01",
+        "changed": "2026-11-01",
+        "license": null,
+        "signature": null
+      },
+      "profiles": [],
+      "extensions": {
+        "org.example.opshub/v1": {
+          "inventory_app": "ops-hub"
+        }
+      }
+    }
+  ]
+}

@@ -62,27 +62,35 @@ and roster cards can be mapped to it.
 
 ## Check a card or a run file
 
-Check a roster card, a `findings.json` or a `coverage.json` against its rules. Needs Node 20 or
+Check a roster card, a `roster.json` (every card of a run), a `findings.json` or a `coverage.json`
+against its rules. Needs Node 20 or
 later and no install:
 
 ```
 node skills/agentroster/scripts/validate-card.mjs my-agent.roster.json
+node skills/agentroster/scripts/validate-card.mjs roster.json
 node skills/agentroster/scripts/validate-findings.mjs findings.json
 node skills/agentroster/scripts/validate-coverage.mjs coverage.json
+node skills/agentroster/scripts/match-golden.mjs expected/ run/
 ```
 
-The formats are in [`spec/findings-and-coverage-v0.1.md`](spec/findings-and-coverage-v0.1.md).
-Exit codes (all three): `0` all files are valid, `1` any file is invalid, `2` a file can't be read
+The formats are in [`spec/findings-and-coverage-v0.1.md`](spec/findings-and-coverage-v0.1.md) and
+[`spec/roster-file-v0.1.md`](spec/roster-file-v0.1.md).
+Exit codes for the three validators: `0` all files are valid, `1` any file is invalid, `2` a file can't be read
 or isn't JSON.
+
+`match-golden.mjs` compares a run folder with a reviewed answer key (`roster.json`, `coverage.json`
+and an optional `expect.json` with `forbidden_strings` and `notes`). It prints one line per
+difference. Exit codes: `0` the run matches, `1` it differs, `2` a file is missing or invalid.
 
 ## Layout
 
 | Path | What it holds |
 |---|---|
-| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept) and the findings and coverage formats (`findings-and-coverage-v0.1.md`) |
-| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json` and `coverage-0.1.schema.json` |
-| `skills/agentroster/` | The skill; so far the three validators (`scripts/validate-card.mjs`, `scripts/validate-findings.mjs`, `scripts/validate-coverage.mjs`) |
-| `examples/` | Example roster cards (`*.roster.json`), `findings.example.json` and `coverage.example.json` |
+| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept), the findings and coverage formats (`findings-and-coverage-v0.1.md`) and the roster file (`roster-file-v0.1.md`) |
+| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json`, `coverage-0.1.schema.json` and `roster-file-0.1.schema.json` |
+| `skills/agentroster/` | The skill; so far the three validators (`scripts/validate-card.mjs`, `scripts/validate-findings.mjs`, `scripts/validate-coverage.mjs`) and `scripts/match-golden.mjs` |
+| `examples/` | Example roster cards (`*.roster.json`), `roster.example.json`, `findings.example.json` and `coverage.example.json` |
 | `tests/` | Tests and synthetic fixtures (`npm test`) |
 | `package.json` | Node 20 or later; no runtime dependencies |
 | `CLAUDE.md`, `AGENTS.md` | Instructions for coding agents working on this repo |
