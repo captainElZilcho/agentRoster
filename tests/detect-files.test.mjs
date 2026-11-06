@@ -47,10 +47,10 @@ test("plain folder: skips dependencies, build output, secrets, run folder", () =
     assert.deepEqual(r.files, ["a.py"]);
     assert.deepEqual(r.skipped, {
       ignored: 0, dependencies: 1, build_output: 1, run_folder: 1,
-      secret_file: 3, link: 0, binary: 0, too_large: 0, unreadable: 0,
+      secret_file: 3, link: 0, binary: 0, too_large: 0, unreadable: 0, submodule: 0,
     });
     assert.deepEqual(Object.keys(r.skipped), [
-      "ignored", "dependencies", "build_output", "run_folder", "secret_file", "link", "binary", "too_large", "unreadable",
+      "ignored", "dependencies", "build_output", "run_folder", "secret_file", "link", "binary", "too_large", "unreadable", "submodule",
     ]);
   } finally { cleanup(root); }
 });
@@ -259,5 +259,34 @@ test("git repo: .ssh folder files count per file as secret_file", { skip: !gitOk
     const r = listFiles(root);
     assert.deepEqual(r.files, ["a.py"]);
     assert.equal(r.skipped.secret_file, 2);
+  } finally { cleanup(root); }
+});
+
+test("git repo: a submodule is counted as submodule, not dropped", { skip: !gitOk }, () => {
+  const root = tmp();
+  try {
+    put(root, "a.py");
+    put(root, "libs/sub/inner.py");
+    git(root, "init", "-q");
+    git(root, "add", "a.py");
+    git(root, "update-index", "--add", "--cacheinfo", "160000,1111111111111111111111111111111111111111,libs/sub");
+    const r = listFiles(root);
+    assert.deepEqual(r.files, ["a.py"]);
+    assert.equal(r.skipped.submodule, 1);
+  } finally { cleanup(root); }
+});
+
+test("git repo: a nested repository that is not a submodule is counted as submodule", { skip: !gitOk }, () => {
+  const root = tmp();
+  try {
+    put(root, "a.py");
+    put(root, "nested/inner.py");
+    git(root, "init", "-q");
+    git(path.join(root, "nested"), "init", "-q");
+    git(path.join(root, "nested"), "add", "inner.py");
+    git(path.join(root, "nested"), "commit", "-q", "-m", "x");
+    const r = listFiles(root);
+    assert.deepEqual(r.files, ["a.py"]);
+    assert.equal(r.skipped.submodule, 1);
   } finally { cleanup(root); }
 });

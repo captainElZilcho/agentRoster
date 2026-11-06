@@ -143,3 +143,11 @@ test("SKILL.md's git-ignore check cannot run the project's git hooks or fsmonito
   const others = [...joined.matchAll(/`(git [^`]*)`/g)].map((m) => m[1]).filter((c) => c !== cmd[1]);
   assert.deepEqual(others, [], "SKILL.md runs no other git command");
 });
+
+test("SKILL.md lists every skip reason detect.mjs counts, and MAP.md covers submodules", async () => {
+  const { listFiles } = await import("../skills/agentroster/scripts/detect.mjs");
+  const keys = Object.keys(listFiles(path.join(skill, "ecosystems")).skipped);
+  const text = read("SKILL.md");
+  for (const k of keys) assert.ok(text.includes(`\`${k}\``), `SKILL.md does not list ${k}`);
+  assert.match(read("MAP.md"), /`submodule`[\s\S]{0,200}"Skipped"[\s\S]{0,200}"Needs\s+checking"/);
+});

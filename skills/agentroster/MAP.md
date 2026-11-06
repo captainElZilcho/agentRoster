@@ -236,6 +236,11 @@ What the checks couldn't settle.
 Files not read, counted by reason (from detect.json `skipped`).
 ```
 
+- **Submodules.** The script does not read git submodules or nested repositories; it counts them
+  under `submodule` in `skipped`. List them under "Skipped". When one may hold agents (its name,
+  its `.gitmodules` entry or the code that calls into it suggests so), also list it under "Needs
+  checking".
+
 - The inventory table header starts `| id | kind |`. Each id is in backticks, and kind is
   `agent` or `workflow`.
 - Each id in the inventory has one level-3 heading ``### `id` `` under "Agents and workflows".

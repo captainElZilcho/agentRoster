@@ -110,7 +110,9 @@ opens secret files, and never copies a line's text. It writes:
 - `ecosystems`: which reference notes to load;
 - `candidates`: each `{file, line, signals, detail, ecosystems}`; `line` is `null` for a whole
   file;
-- `skipped`: how many files it did not read, by reason.
+- `skipped`: how many files it did not read, by reason: `ignored`, `dependencies`,
+  `build_output`, `run_folder`, `secret_file`, `link`, `binary`, `too_large`, `unreadable`,
+  `submodule` (a git submodule or nested repository, counted once; see `MAP.md` section 9).
 
 The script is the floor. It finds the common, obvious signs, not everything. If the scope is a
 folder, its paths are relative to that folder: put the folder path in front of each one when you

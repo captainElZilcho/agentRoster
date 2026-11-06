@@ -30,7 +30,7 @@ test("result shape and skipped keys", () => {
   assert.deepEqual(Object.keys(r), ["detect", "ecosystems", "candidates", "skipped"]);
   assert.equal(r.detect, "0.1");
   assert.deepEqual(Object.keys(r.skipped), [
-    "ignored", "dependencies", "build_output", "run_folder", "secret_file", "link", "binary", "too_large", "unreadable",
+    "ignored", "dependencies", "build_output", "run_folder", "secret_file", "link", "binary", "too_large", "unreadable", "submodule",
   ]);
 });
 

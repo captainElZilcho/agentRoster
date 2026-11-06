@@ -22,7 +22,7 @@ import path from "node:path";
 import { compareText } from "./lib/order.mjs";
 import { isEntryPoint } from "./lib/cli.mjs";
 
-/** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"|"unreadable"} SkipReason */
+/** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"|"unreadable"|"submodule"} SkipReason */
 
 const DEPENDENCY_DIRS = new Set(["node_modules", ".venv", "venv", "vendor", "__pycache__"]);
 const BUILD_DIRS = new Set(["dist", "build"]);
@@ -32,7 +32,7 @@ const RUN_DIRS = new Set([".agentroster"]);
 function emptyCounts() {
   return {
     ignored: 0, dependencies: 0, build_output: 0, run_folder: 0,
-    secret_file: 0, link: 0, binary: 0, too_large: 0, unreadable: 0,
+    secret_file: 0, link: 0, binary: 0, too_large: 0, unreadable: 0, submodule: 0,
   };
 }
 
@@ -132,7 +132,8 @@ function walk(root, rel, files, skipped) {
  * Uses git when `root` is inside a work tree (so ignored files stay out), else walks the folder.
  * Throws the system error (code kept) if `root` is missing or unreadable; an unreadable nested folder is
  * counted as `unreadable`. Count units: in the walk a skipped folder counts once; in git mode skip reasons
- * count per file and `ignored` counts git's `--directory` entries.
+ * count per file and `ignored` counts git's `--directory` entries. A git submodule or nested repository
+ * counts once as `submodule`; its files are not listed.
  * Callers must open listed files without following links (a link may replace a file after listing).
  * @param {string} root
  * @returns {{files: string[], skipped: Record<SkipReason, number>}}
@@ -164,6 +165,8 @@ export function listFiles(root) {
         }
         if (linked) { skipped.link++; continue; }
         if (st && st.isFile()) files.push(p);
+        // A listed folder is a submodule or a nested repository: its files are not read here.
+        else if (st && st.isDirectory()) skipped.submodule++;
       }
       files.sort(compareText);
       return { files, skipped };
