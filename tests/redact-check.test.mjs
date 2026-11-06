@@ -67,8 +67,11 @@ test("readEnvValues reads .env and .env.* below the root, skips junk folders and
   put(outside, ".env", "I=FAKE-outside-value\n");
   fs.symlinkSync(outside, path.join(root, "linked"));
   fs.symlinkSync(path.join(outside, ".env"), path.join(root, "sub", ".env.link"));
-  const values = readEnvValues(root).sort();
-  assert.deepEqual(values, ["FAKE-value-four", "FAKE-value-one", "FAKE-value-three", "FAKE-value-two"]);
+  const values = readEnvValues(root);
+  for (const want of ["FAKE-value-one", "FAKE-value-two", "FAKE-value-three", "FAKE-value-four"]) {
+    assert.ok(values.includes(want), want);
+  }
+  assert.ok(!values.some((v) => /skipped|outside|comment|short/.test(v)));
 });
 
 test("readEnvValues gives [] when there is no .env", () => {
@@ -150,11 +153,81 @@ test("CLI: files named like secrets and git-ignored run folders are still scanne
   assert.equal(r.stdout, "leak: secrets.md:1 (secret-shaped)\nleaks: 1\n");
 });
 
-test("CLI: binary files are skipped without error", () => {
+test("CLI: a file with a NUL byte is scanned as latin1 text", () => {
   const dir = tmp();
-  fs.writeFileSync(path.join(dir, "x.bin"), Buffer.concat([Buffer.from([0, 1, 2]), Buffer.from(shapes["sk-"])]));
-  put(dir, "map.md", "fine\n");
+  fs.writeFileSync(path.join(dir, "x.bin"), Buffer.concat([Buffer.from([0, 1, 2, 10]), Buffer.from(shapes["sk-"])]));
   const r = run(dir);
-  assert.equal(r.status, 0);
-  assert.equal(r.stdout, "clean: 2 files\n");
+  assert.equal(r.status, 1);
+  assert.equal(r.stdout, "leak: x.bin:2 (secret-shaped)\nleaks: 1\n");
+});
+
+test("CLI: UTF-16 files with a byte-order mark are decoded and scanned", () => {
+  for (const [name, bom, enc] of [["le.txt", [0xff, 0xfe], "utf16le"], ["be.txt", [0xfe, 0xff], "be"]]) {
+    const dir = tmp();
+    let body = Buffer.from(`hi\n${shapes["sk-"]}\n`, "utf16le");
+    if (enc === "be") body = body.swap16();
+    fs.writeFileSync(path.join(dir, name), Buffer.concat([Buffer.from(bom), body]));
+    const r = run(dir);
+    assert.equal(r.status, 1, name);
+    assert.equal(r.stdout, `leak: ${name}:2 (secret-shaped)\nleaks: 1\n`);
+  }
+});
+
+test("sk- needs a left boundary", () => {
+  const k = shapes["sk-"];
+  const hit = (t) => findLeaks([{ path: "a", text: t }], []).length;
+  assert.equal(hit("the task-planner-orchestrator agent"), 0);
+  assert.equal(hit(`key=${k}`), 1);
+  assert.equal(hit(`"${k}"`), 1);
+});
+
+test("readEnvValues parses like dotenv", () => {
+  const root = tmp();
+  put(root, ".env", [
+    "A=FAKE-plain-one # note",
+    'B="FAKE-quoted-two" # note',
+    "export C = FAKE-spaced-three",
+    'D="FAKE-multi-four',
+    'FAKE-multi-five"',
+    "E='FAKE-single-six' trailing",
+    "F=`FAKE-tick-seven`",
+    "",
+  ].join("\n"));
+  const v = readEnvValues(root);
+  for (const want of ["FAKE-plain-one", "FAKE-quoted-two", "FAKE-spaced-three", "FAKE-multi-four", "FAKE-multi-five", "FAKE-single-six", "FAKE-tick-seven"]) {
+    assert.ok(v.includes(want), want);
+  }
+});
+
+test("a double-quoted value with \\n escapes is split into lines", () => {
+  const root = tmp();
+  put(root, ".env", 'K="FAKE-first-line\\nFAKE-second-line"\n');
+  const v = readEnvValues(root);
+  assert.ok(v.includes("FAKE-first-line") && v.includes("FAKE-second-line"));
+});
+
+test("an env value in the middle of a long line is found", () => {
+  const v = "FAKE-middle-value";
+  assert.equal(findLeaks([{ path: "a", text: `lots of words ${v}, more words` }], [v]).length, 1);
+});
+
+test("CLI: an unreadable .env fails closed", { skip: process.getuid?.() === 0 }, () => {
+  const dir = tmp();
+  const project = tmp();
+  put(dir, "map.md", "fine\n");
+  put(project, ".env", "K=FAKE-hidden-value\n");
+  fs.chmodSync(path.join(project, ".env"), 0);
+  const r = run(dir, "--project", project);
+  fs.chmodSync(path.join(project, ".env"), 0o600);
+  assert.equal(r.status, 2);
+  assert.equal(r.stderr.trim(), `cannot read ${path.join(project, ".env")} (no permission)`);
+});
+
+test("CLI: a linked run folder is refused", () => {
+  const real = tmp();
+  const link = path.join(tmp(), "link");
+  fs.symlinkSync(real, link);
+  const r = run(link);
+  assert.equal(r.status, 2);
+  assert.equal(r.stderr.trim(), `cannot read ${link} (is a link)`);
 });

@@ -3,14 +3,14 @@
 // value: a hit is only a file, a line number and a kind.
 // Usage: redact-check.mjs <run-dir> [--project <dir>]
 
-import { closeSync, lstatSync, openSync, readFileSync, readSync, readdirSync } from "node:fs";
+import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "./lib/cli.mjs";
 import { compareText } from "./lib/order.mjs";
 
 /** The shapes of well-known secrets. */
 export const SECRET_SHAPES = [
-  /sk-[A-Za-z0-9_-]{16,}/,
+  /(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{16,}/,
   /ghp_[A-Za-z0-9]{36}/,
   /github_pat_[A-Za-z0-9_]{20,}/,
   /AKIA[0-9A-Z]{16}/,
@@ -50,6 +50,7 @@ export function findLeaks(files, envValues) {
 
 /**
  * Walk a folder: every regular file at any depth. Links are never followed.
+ * A folder that cannot be read throws an error that carries its path in `file`.
  * @param {string} root
  * @param {(name: string) => boolean} skipFolder
  * @returns {string[]} Paths relative to root, with "/" separators, sorted.
@@ -57,7 +58,14 @@ export function findLeaks(files, envValues) {
 function walk(root, skipFolder = () => false) {
   const found = [];
   const visit = (dir, prefix) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch (err) {
+      err.file = dir;
+      throw err;
+    }
+    for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
       const rel = prefix + entry.name;
       if (entry.isDirectory()) {
@@ -72,7 +80,53 @@ function walk(root, skipFolder = () => false) {
 }
 
 /**
+ * Candidate values from the text of one .env file, parsed like dotenv. Also adds the raw text
+ * after "=" as a fallback, and each line of a multi-line value.
+ * @param {string} text
+ * @returns {string[]}
+ */
+function parseEnv(text) {
+  const out = [];
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*\s*=\s*(.*)$/.exec(lines[i]);
+    if (!m) continue;
+    const rest = m[1];
+    out.push(rest.trim());
+    const quote = rest[0];
+    if (quote === '"' || quote === "'" || quote === "`") {
+      let body = rest.slice(1);
+      let j = i;
+      let end = findClose(body, quote);
+      while (end === -1 && quote === '"' && j + 1 < lines.length) {
+        body += "\n" + lines[++j];
+        end = findClose(body, quote);
+      }
+      if (end !== -1) {
+        let value = body.slice(0, end);
+        if (quote === '"') value = value.replace(/\\n/g, "\n");
+        out.push(value, ...value.split("\n"));
+        i = j;
+        continue;
+      }
+    }
+    out.push(rest.split(/\s#/)[0].trim());
+  }
+  return out;
+}
+
+/** Index of the closing quote in `body` (skipping backslash-escaped ones), or -1. */
+function findClose(body, quote) {
+  for (let k = 0; k < body.length; k++) {
+    if (body[k] === "\\") k++;
+    else if (body[k] === quote) return k;
+  }
+  return -1;
+}
+
+/**
  * Read the values from .env and .env.* files in a project, to compare in memory only.
+ * A file or folder that cannot be read throws (fails closed), with its path in `file`.
  * @param {string} projectDir
  * @returns {string[]} Values of 8 characters or more.
  */
@@ -85,19 +139,11 @@ export function readEnvValues(projectDir) {
     let text;
     try {
       text = readFileSync(path.join(projectDir, rel), "utf8");
-    } catch {
-      continue;
+    } catch (err) {
+      err.file = path.join(projectDir, rel);
+      throw err;
     }
-    for (const line of text.split(/\r?\n/)) {
-      const m = /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*\s*=\s*(.*?)\s*$/.exec(line);
-      if (!m) continue;
-      let value = m[1];
-      const quote = value[0];
-      if ((quote === '"' || quote === "'") && value.length >= 2 && value.endsWith(quote)) {
-        value = value.slice(1, -1);
-      }
-      if (value.length >= MIN_ENV_LENGTH) values.add(value);
-    }
+    for (const v of parseEnv(text)) if (v.length >= MIN_ENV_LENGTH) values.add(v);
   }
   return [...values].sort(compareText);
 }
@@ -109,16 +155,13 @@ class CliError extends Error {}
 const reason = (err) =>
   err?.code === "ENOENT" ? "not found" : err?.code === "EACCES" || err?.code === "EPERM" ? "no permission" : err?.code === "EISDIR" ? "is a folder" : "unreadable";
 
-/** Is this file binary (a NUL byte in the first 8 KiB)? */
-function isBinary(file) {
-  const fd = openSync(file, "r");
-  try {
-    const buf = Buffer.alloc(8192);
-    const n = readSync(fd, buf, 0, buf.length, 0);
-    return buf.subarray(0, n).includes(0);
-  } finally {
-    closeSync(fd);
-  }
+/** Read a run file as text. Nothing is skipped: UTF-16 with a mark is decoded, a file with a NUL byte is read as latin1. */
+function readRunText(file) {
+  const buf = readFileSync(file);
+  if (buf[0] === 0xff && buf[1] === 0xfe) return buf.subarray(2).toString("utf16le");
+  if (buf[0] === 0xfe && buf[1] === 0xff) return Buffer.from(buf.subarray(2)).swap16().toString("utf16le");
+  if (buf.includes(0)) return buf.toString("latin1");
+  return buf.toString("utf8");
 }
 
 /**
@@ -142,13 +185,14 @@ export function runRedactCheckCli(args) {
     const runDir = rest[0];
 
     current = runDir;
-    if (!lstatSync(runDir).isDirectory()) throw new CliError(`cannot read ${runDir} (is not a folder)`);
+    const st = lstatSync(runDir);
+    if (st.isSymbolicLink()) throw new CliError(`cannot read ${runDir} (is a link)`);
+    if (!st.isDirectory()) throw new CliError(`cannot read ${runDir} (is not a folder)`);
     const names = walk(runDir);
     const files = [];
     for (const rel of names) {
       current = path.join(runDir, rel);
-      if (isBinary(current)) continue;
-      files.push({ path: rel, text: readFileSync(current, "utf8") });
+      files.push({ path: rel, text: readRunText(current) });
     }
     let envValues = [];
     if (project !== null) {
@@ -165,7 +209,7 @@ export function runRedactCheckCli(args) {
     return 0;
   } catch (err) {
     if (err instanceof CliError) console.error(err.message);
-    else if (err?.code) console.error(`cannot read ${current} (${reason(err)})`);
+    else if (err?.code) console.error(`cannot read ${err.file ?? current} (${reason(err)})`);
     else console.error("error: unexpected failure");
     return 2;
   }
