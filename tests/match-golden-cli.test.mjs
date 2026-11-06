@@ -288,7 +288,7 @@ test("only coverage: a bad flag or a misplaced flag prints usage and exits 2", (
   }
 });
 
-test("match: a 0.1 expected coverage matches a 0.2 run coverage", () => {
+test("only coverage: a 0.1 expected coverage matches a 0.2 run coverage", () => {
   withTempDir((dir) => {
     const exp = path.join(dir, "exp");
     const act = path.join(dir, "act");
@@ -303,6 +303,24 @@ test("match: a 0.1 expected coverage matches a 0.2 run coverage", () => {
     for (const c of v02.candidates) { c.found_by = "script"; c.validation = { status: "validated", rounds: 1 }; }
     fs.writeFileSync(path.join(act, "coverage.json"), JSON.stringify(v02));
     const r = run(["--only", "coverage", exp, act]);
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+  });
+});
+
+test("match: a 0.1 expected coverage matches a 0.2 run coverage without --only", () => {
+  withTempDir((dir) => {
+    const exp = path.join(dir, "exp");
+    const act = path.join(dir, "act");
+    fs.mkdirSync(exp);
+    fs.mkdirSync(act);
+    for (const d of [exp, act]) fs.copyFileSync(path.join(expected, "roster.json"), path.join(d, "roster.json"));
+    fs.copyFileSync(path.join(expected, "coverage.json"), path.join(exp, "coverage.json"));
+    const v02 = JSON.parse(fs.readFileSync(path.join(expected, "coverage.json"), "utf8"));
+    v02.coverage = "0.2";
+    v02.summary.needs_checking = 0;
+    for (const c of v02.candidates) { c.found_by = "script"; c.validation = { status: "validated", rounds: 1 }; }
+    fs.writeFileSync(path.join(act, "coverage.json"), JSON.stringify(v02));
+    const r = run([exp, act]);
     assert.equal(r.status, 0, r.stdout + r.stderr);
   });
 });
