@@ -45,7 +45,9 @@ Task B: **hunt for anything both searches missed.** This is its own task, done a
 task A (its own helper agent, or its own pass). Search the project for model calls, wrappers,
 prompt files, agent definitions and frameworks that are not in `coverage.json`. Use the
 "what text search can't see" list in `MAP.md` and the notes in `ecosystems/`. Report each find
-with file and line.
+with file and line, and say whether its file already has a candidate: a find in such a file is
+card evidence, not a new candidate (`MAP.md` section 5, "When the agent search adds a
+candidate").
 
 The validator's report is a list. For each problem: where (file and line, or the id), what is
 wrong, and what the project shows instead. An empty list means it agrees.
@@ -53,8 +55,10 @@ wrong, and what the project shows instead. An empty list means it agrees.
 ## 3. Rounds
 
 1. The validator checks and reports (round 1).
-2. The finder fixes each problem it agrees with, adds each missed find as a new candidate
-   (`found_by: "agent"`), and answers each problem it doesn't agree with, with evidence.
+2. The finder fixes each problem it agrees with, and answers each problem it doesn't agree
+   with, with evidence. A missed find in a file with no candidate yet becomes a new candidate
+   (`found_by: "agent"`); a missed find in a file that already has a candidate is added as
+   evidence on the card (`MAP.md` section 5).
 3. A fresh validator checks again (round 2), then again if needed (round 3). Each round checks
    the fixes, the new candidates, and the answers.
 4. After the last round, what still fails, and any find from the last round that no later round

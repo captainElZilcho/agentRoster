@@ -34,12 +34,14 @@ If your own search finds one of these ecosystems that the script missed, load it
    script reads: skip git-ignored files, dependencies, build output and the run folder. Look
    for:
    - model calls over plain HTTP, and SDKs or frameworks not on the list (`generic.md`);
-   - homemade wrappers around a model client, and every place that calls them;
+   - homemade wrappers around a model client, and the places that call them;
    - model names in config files, and env variable names that pick a model or provider;
    - prompts built from several files or strings, and prompt or role files the code loads;
    - imports the script can't see (several modules on one line, imports inside functions,
      dynamic imports, other languages).
-   Each new place is a candidate with `found_by: "agent"`.
+   A find in a file that has no candidate yet is a new candidate with `found_by: "agent"`. A
+   find in a file that already has a candidate is evidence on the card, not a new candidate
+   (section 5, "When the agent search adds a candidate").
 3. **Follow the prompts** into the files the code loads, and make each loaded prompt file a
    candidate. A prompt from a database, a URL or an env variable is an unknown ("loaded from
    X"). Never fetch it.
@@ -110,8 +112,9 @@ These hold for any project.
 A candidate is a place that might hold an agent or workflow. Every one is recorded, whether or
 not it leads to a card.
 
-- **Line-level or whole-file.** A signal on a line (an import, a call) gives one candidate for
-  that line. A signal that is the whole file (a subagent file, a skill file, a prompt file, an
+- **Line-level or whole-file.** In the script, a signal on a line (an import, a call) gives one
+  candidate for that line. That is the script's line-level rule; your own finds follow "When the
+  agent search adds a candidate" below. A signal that is the whole file (a subagent file, a skill file, a prompt file, an
   MCP config, a hand card) gives one candidate with `line: null`. Each `file` and `line` pair
   appears once.
 - **Add candidates, never remove the script's.** Every candidate in `detect.json` goes into
@@ -256,9 +259,10 @@ After the checking loop in `VALIDATION.md`, run these from the skill folder, in 
 1. `node <skill>/scripts/validate-coverage.mjs <run>/coverage.json`: the format and the counts.
 2. `node <skill>/scripts/check-map.mjs <run>`: the eight headings, the inventory, and the same ids
    in `map.md` and `coverage.json`.
-3. `node <skill>/scripts/redact-check.mjs <run> --project <project>`: no secret-shaped text and no
-   value from the project's `.env` files in the run folder. It prints only the file, line and
-   kind of each hit, never the value.
+3. `node <skill>/scripts/redact-check.mjs <run> --project <project>`: no secret-shaped text, no
+   value from the project's `.env` files ("value from .env") and no secret value from its MCP and
+   Claude Code settings files ("value from config") in the run folder, and no link in it. It
+   prints only the file, line and kind of each hit, never the value.
 
 A failure is fixed and the check run again, starting from the first. For a leak, replace the
 value in the run file with `[redacted]`. If a check can't be made to pass, stop and tell the

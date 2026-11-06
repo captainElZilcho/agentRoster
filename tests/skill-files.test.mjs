@@ -151,3 +151,19 @@ test("SKILL.md lists every skip reason detect.mjs counts, and MAP.md covers subm
   for (const k of keys) assert.ok(text.includes(`\`${k}\``), `SKILL.md does not list ${k}`);
   assert.match(read("MAP.md"), /`submodule`[\s\S]{0,200}"Skipped"[\s\S]{0,200}"Needs\s+checking"/);
 });
+
+test("MAP.md and VALIDATION.md point the agent search at the section 5 rule", () => {
+  const map = read("MAP.md");
+  const val = read("VALIDATION.md");
+  assert.doesNotMatch(map, /Each new place is a candidate|every place that calls them/);
+  assert.doesNotMatch(val, /adds each missed find as a new candidate/);
+  for (const [name, text] of [["MAP.md", map], ["VALIDATION.md", val]]) {
+    const n = (text.match(/When the\s+agent\s+search\s+adds\s+a\s+candidate/g) ?? []).length;
+    assert.ok(n >= (name === "MAP.md" ? 3 : 1), `${name} names the rule ${n} times`);
+  }
+  assert.match(map, /value from config/, "MAP.md says redact-check compares config values");
+});
+
+test("README does not claim the skill never copies a secret", () => {
+  assert.doesNotMatch(fs.readFileSync("README.md", "utf8"), /never copies a secret/);
+});
