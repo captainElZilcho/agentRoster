@@ -35,8 +35,12 @@ with tools in `crewai_tools` or `crewai.tools`.
 
 ## Agent or workflow
 
-- **Each `Agent(...)` (or `@agent` method) is an agent card,** kind agent: it runs its own tool
-  loop for each task. Quote the `Agent(` line or the `@agent` method.
+- **Each `Agent(...)` (or `@agent` method) gets its own card** (its own role and job), and it
+  reports to the crew. Its kind depends on what the model can choose:
+  - with `tools=[...]` or `allow_delegation=True`, it is kind `agent`: the model picks its tools
+    or whom to delegate to. Quote the `tools=` or `allow_delegation=` line;
+  - with no tools and no delegation, it makes one model call per task along a fixed path, so it is
+    kind `workflow`. Quote the `Agent(` line or the `@agent` method that shows no tools.
 - **A crew with `process=Process.sequential`** (the default) runs tasks in a fixed order: the
   crew is a workflow card, and its agents report to it. Quote the `process=` line, or the `Crew(`
   call if it is left out.

@@ -119,6 +119,10 @@ test("SKILL.md's secret file list matches what detect.mjs never opens", () => {
   for (const n of names) assert.ok(text.includes(n), `SKILL.md does not list ${n}`);
 });
 
+test("the CrewAI note makes an agent with no tools a workflow", () => {
+  assert.match(read("ecosystems/crewai.md"), /no tools and no delegation[\s\S]{0,120}kind\s+`workflow`/);
+});
+
 test("no note calls a single fixed model call an agent", () => {
   for (const f of markdownFiles()) {
     assert.doesNotMatch(read(f), /even with no tools|kind agent\), but the model chooses nothing|kind agent, that chooses nothing/, f);
