@@ -45,7 +45,8 @@ Never open `.env` files, including `.env.example`.
 **Prompt files.** Files the code reads and sends to a model: `prompts/`, `*.prompt`,
 `*.prompty`, `*.txt`, `*.md`, `*.jinja`, `*.j2`, `*.hbs`, YAML or JSON with `system` or
 `instructions` keys. Each loaded prompt file is a whole-file candidate with signal
-`prompt-file`.
+`prompt-file`, except a shared skill file appended into prompts, which has signal
+`skill-file` (`MAP.md`).
 
 ## Where things live
 
