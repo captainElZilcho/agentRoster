@@ -24,13 +24,23 @@ Subagent frontmatter (read the file; only record keys that are there):
 
 - `name`, `description` (when the main session should use it);
 - `tools`: a comma-separated list of tool names (`Read, Grep, Bash`, `mcp__<server>__<tool>`,
-  `Agent(<name>, …)` to limit which subagents it may start). No `tools` key means it gets the
-  main session's tools; record that as written, not as a list. The list goes in `tools.allow`
-  (and `disallowedTools` in `tools.deny`), never in permission;
-- `model`: `sonnet`, `opus`, `haiku`, a full model id, or `inherit`;
-- `permissionMode` (the declared permission setting: it sets `guardrails.permission`) and
-  other keys such as `disallowedTools`, `skills` (skills loaded into it),
-  `mcpServers`, `hooks`, `maxTurns` or `memory`, where the file has them.
+  `Agent(<name>, …)` to limit which subagents it may start). No `tools` key means it inherits
+  every tool available to subagents; record that as written, not as a list. The list goes in
+  `tools.allow` (and `disallowedTools` in `tools.deny`), never in permission;
+- `model`: `sonnet`, `opus`, `haiku`, `fable`, a full model id, or `inherit`;
+- `permissionMode`: the declared permission setting, so it sets `guardrails.permission`. Values:
+  `default` (`manual` is another name for it), `acceptEdits`, `auto`, `dontAsk`,
+  `bypassPermissions`, `plan`. `plan` explores without making changes, so it maps to
+  `read-only`;
+- `omitClaudeMd: true` skips the `CLAUDE.md` files (see below);
+- other keys that map to card fields, where the file has them: `skills` (skills loaded into
+  it), `mcpServers` (tools), `hooks` (guardrails), `maxTurns` (limits), `memory`. There are more
+  keys; record only what maps to a card field.
+
+**Context.** Custom subagents get the user, project and local `CLAUDE.md` files by default. List
+the project's `CLAUDE.md` under the card's `context`, unless the subagent sets
+`omitClaudeMd: true`. (The built-in Explore and Plan agents skip it, but they are not project
+files.)
 
 Skill frontmatter: `name`, `description`, and optional keys such as `allowed-tools`, `model`,
 `context: fork` (run in its own subagent), `agent`, `disable-model-invocation`. The body is the

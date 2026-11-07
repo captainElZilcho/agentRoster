@@ -27,21 +27,26 @@ uses snake_case, TypeScript camelCase):
 - **Tools:** `allowed_tools` / `allowedTools` and `disallowed_tools` / `disallowedTools` (tool
   names such as `Read`, `Bash`, `mcp__<server>__<tool>`), plus `mcp_servers` / `mcpServers`
   (including in-process servers made with `create_sdk_mcp_server` and functions marked `@tool`).
-  The allowed and disallowed lists go in `tools.allow` / `tools.deny`, never in permission.
-- **Model:** `model`. If it is not set, the SDK's default applies; record the model as unknown
-  (`other`, "SDK default"), not a guess.
+  Record `allowedTools` under `tools.allow` (the tools it is set up with) and `disallowedTools`
+  under `tools.deny`, never in permission. `allowedTools` only approves the listed tools without
+  asking; tools not on it still go through `permissionMode` and `canUseTool`, so it is not a
+  limit by itself. `disallowedTools` blocks.
+- **Model:** `model`. If it is not set, the docs name no SDK default (the CLI's default depends
+  on the account): record the model as unknown (`other`), not a guess.
 - **Limits:** `max_turns` / `maxTurns`, and any budget or cost cap the options set.
-- **Permission:** `permission_mode` / `permissionMode` (`default`, `acceptEdits`, `plan`,
-  `bypassPermissions`) is the declared permission setting, so it sets `guardrails.permission`.
-  A `can_use_tool` / `canUseTool` callback is code that approves tool use: record it as a
-  guardrail with file and line, not as the permission.
+- **Permission:** `permission_mode` / `permissionMode` (`default`, with `manual` as another name
+  for it, `acceptEdits`, `auto`, `dontAsk`, `plan`, `bypassPermissions`) is the declared
+  permission setting, so it sets `guardrails.permission`. A `can_use_tool` / `canUseTool`
+  callback is code that approves tool use; it runs only when the permission flow would otherwise
+  ask. Record it as a guardrail with file and line, not as the permission.
 - **Hooks:** `hooks` run code before or after tool use; record them as guardrails with file and
   line.
 - **Subagents:** `agents`, a map of name to a definition (`AgentDefinition` in Python) with
   `description`, `prompt`, `tools` and `model`.
 - **Files from disk:** `setting_sources` / `settingSources` (`"user"`, `"project"`, `"local"`)
-  loads `.claude/` settings, `CLAUDE.md`, subagent files and skills from disk. Note which
-  sources it names; `"user"` points outside the repo.
+  loads `.claude/` settings, `CLAUDE.md`, subagent files and skills from disk. When it is not
+  set, it takes the CLI defaults (all sources). Note which sources apply; `"user"` points
+  outside the repo.
 
 ## Agent or workflow
 
@@ -54,10 +59,10 @@ uses snake_case, TypeScript camelCase):
 
 ## Traps
 
-- **Filesystem agents only count when loaded.** `.claude/agents/*.md` and skills are part of this
-  agent only if `setting_sources` includes `"project"` (or the code loads them another way).
-  Without it, those files are not this agent's; they may still be Claude Code's own (see
-  `claude-code.md`).
+- **Filesystem agents load by default.** When `setting_sources` is not set, the project's
+  `.claude/agents/*.md` and skills are part of this agent. Only an explicit list without
+  `"project"` leaves them out; then those files are not this agent's, though they may still be
+  Claude Code's own (see `claude-code.md`).
 - **`"user"` settings** live outside the repo: record what they would add as an unknown
   (`outside-repo`).
 - **The `prompt` passed to `query`** is the task, often built from user input. The system prompt

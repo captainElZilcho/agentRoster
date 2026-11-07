@@ -123,6 +123,10 @@ test("the CrewAI note makes an agent with no tools a workflow", () => {
   assert.match(read("ecosystems/crewai.md"), /no tools and no delegation[\s\S]{0,120}kind\s+`workflow`/);
 });
 
+test("the Claude Code note lists CLAUDE.md as context unless omitClaudeMd is set", () => {
+  assert.match(read("ecosystems/claude-code.md"), /omitClaudeMd: true/);
+});
+
 test("no note calls a single fixed model call an agent", () => {
   for (const f of markdownFiles()) {
     assert.doesNotMatch(read(f), /even with no tools|kind agent\), but the model chooses nothing|kind agent, that chooses nothing/, f);

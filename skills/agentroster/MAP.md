@@ -39,8 +39,9 @@ If your own search finds one of these ecosystems that the script missed, load it
    - prompts built from several files or strings, and prompt or role files the code loads;
    - imports the script can't see (several modules on one line, imports inside functions,
      dynamic imports, other languages).
-   A find in a file that has no candidate yet is a new candidate with `found_by: "agent"`. A
-   find in a file that already has a candidate is evidence on the card, not a new candidate
+   A model call in a file that has no candidate yet is a new candidate with `found_by: "agent"`.
+   In a file that already has a candidate, what you find is evidence on the card, not a new
+   candidate
    (section 5, "When the agent search adds a candidate").
 3. **Follow the prompts** into the files the code loads, and make each loaded prompt file a
    candidate. A prompt from a database, a URL or an env variable is an unknown ("loaded from
@@ -239,8 +240,9 @@ What the checks couldn't settle.
 Files not read, counted by reason (from detect.json `skipped`).
 ```
 
-- **Submodules.** The script does not read git submodules or nested repositories; it counts them
-  under `submodule` in `skipped`. List them under "Skipped". When one may hold agents (its name,
+- **Submodules.** In a git repository, the script does not read git submodules or nested
+  repositories; it counts them under `submodule` in `skipped`. Without git (a plain folder walk),
+  a nested repository's files are read like any others. List them under "Skipped". When one may hold agents (its name,
   its `.gitmodules` entry or the code that calls into it suggests so), also list it under "Needs
   checking".
 

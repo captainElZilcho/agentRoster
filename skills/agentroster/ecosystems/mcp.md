@@ -50,9 +50,11 @@ agent gets which server's tools.
 - **Which agents get the tools.** In Claude Code, project `.mcp.json` servers are open to the main
   session and to subagents that don't limit their tools. A subagent with a `tools` list gets
   only the MCP tools it names. Link by what the config and the tools lists show.
-- **Servers may need approval.** Claude Code asks before using project servers; settings such as
-  `enableAllProjectMcpServers` or `enabledMcpjsonServers` turn them on. Record what the settings
-  say; don't assume a server is on or off.
+- **Approval is a machine setting, not part of the definition.** Claude Code asks before using
+  project servers only in interactive sessions; `claude -p`, the Agent SDK and cloud sessions
+  load them without asking. `enableAllProjectMcpServers` and `enabledMcpjsonServers` approve
+  servers, and `disabledMcpjsonServers` rejects one. Keep the link from each agent that uses the
+  server; note a setting that rejects it.
 - **Secrets in config.** `env` blocks and `headers` (`Authorization`) often hold real keys, and
   `${VAR}` references point to env variables. Cite the file and line, never the value.
 - **Prompts from a server** (`@mcp.prompt()`) are templates a person or host picks; they are not

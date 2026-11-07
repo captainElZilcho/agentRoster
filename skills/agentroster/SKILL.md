@@ -1,6 +1,6 @@
 ---
 name: agentroster
-description: Map every AI agent and model workflow in a project, in any language, and record what each one uses (model, prompts, tools, skills, data, trigger) with file and line. Use when the user asks to map, list, inventory or audit the agents, LLM calls, subagents or AI workflows in a codebase, or to make roster cards for them. Reads the project without running it, never copies secrets, and writes map.md and coverage.json to a git-ignored run folder.
+description: Map every AI agent and model workflow in a project, in any language, and record what each one uses (model, prompts, tools, skills, data, trigger) with file and line. Use when the user asks to map, list, inventory or audit the agents, LLM calls, subagents or AI workflows in a codebase, or to make roster cards for them. Reads the project without running it, checks its output for secrets, and writes map.md and coverage.json to a git-ignored run folder.
 ---
 
 # AgentRoster
