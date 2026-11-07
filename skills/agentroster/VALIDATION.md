@@ -53,7 +53,30 @@ candidate").
 The validator's report is a list. For each problem: where (file and line, or the id), what is
 wrong, and what the project shows instead. An empty list means it agrees.
 
-## 3. Rounds
+## 3. What the validator checks (cards)
+
+The same two roles, the same rounds and modes. The validator gets `roster.json`, `map.md`,
+`coverage.json` and the project, never the finder's notes.
+
+1. **Each value against its evidence.** Every filled field's evidence is at that file and line,
+   and the line really shows that value. A value with no evidence, or evidence that shows
+   something else, is a problem.
+2. **Nothing invented, nothing missed.** A field the code does show is filled; a field it does
+   not show is empty. A value that lives outside the code is empty with an unknown in
+   `coverage.json`.
+3. **Kind and type.** The kind follows the identity rule; the type follows the job, and its
+   deciding line is quoted.
+4. **Guardrails.** A limit is enforced in code, or it is listed as stated only; permission comes
+   only from a declared setting.
+5. **Hand cards.** Every value a hand card sets is on the card as written, with the hand card as
+   its first evidence; disagreements with the code are kept, not fixed.
+6. **The card-view extension.** `steps` are in the order the code runs them, and every filled
+   value in it has evidence.
+
+A card value still in dispute after the last round stays on the card, and the card's candidates in
+`coverage.json` get `validation.status: "needs-checking"`, so the dispute is visible.
+
+## 4. Rounds
 
 1. The validator checks and reports (round 1).
 2. The finder fixes each problem it agrees with, and answers each problem it doesn't agree
@@ -66,7 +89,7 @@ wrong, and what the project shows instead. An empty list means it agrees.
    could check, is `needs-checking`. It stays in the output and is listed under "Needs checking"
    in `map.md` with what was in dispute. It is never dropped.
 
-## 4. Modes
+## 5. Modes
 
 The mode changes only the checking, never the search.
 
@@ -82,7 +105,7 @@ so it is `needs-checking`.
 For the map, more finds are safer, so `thorough` keeps a find that any one hunt reported. (For
 findings, the assess phase will keep only what all three agree on.)
 
-## 5. What to record
+## 6. What to record
 
 - `snapshot.mode` in `coverage.json` is the mode that ran.
 - Each candidate's `validation`:

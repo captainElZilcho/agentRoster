@@ -1,0 +1,24 @@
+{
+  "coverage": "0.2",
+  "snapshot": {
+    "id": "run-2026-11-07-1",
+    "taken_at": "2026-11-07T09:00:00Z",
+    "project": "tiny-app",
+    "standard": "0.2",
+    "packs": [],
+    "mode": "standard",
+    "previous": null
+  },
+  "summary": {
+    "candidates": 0,
+    "read": 0,
+    "not_read": 0,
+    "not_understood": 0,
+    "cards": 0,
+    "no_agent": 0,
+    "needs_checking": 0,
+    "unknowns": 0
+  },
+  "candidates": [],
+  "unknowns": []
+}

@@ -100,7 +100,7 @@ function withRefTargets(node, root) {
 }
 
 /** Can this branch apply to the value, judging by type and required keys only? */
-function isApplicable(branch, value, root) {
+function isApplicable(branch, value, root, { typeOnly = false } = {}) {
   if (typeof branch === "boolean") return true;
   for (const node of withRefTargets(branch, root)) {
     if (node.type !== undefined) {
@@ -109,7 +109,7 @@ function isApplicable(branch, value, root) {
     }
     if (node.const !== undefined && jsonType(node.const) !== jsonType(value)) return false;
     if (Array.isArray(node.enum) && !node.enum.some((e) => jsonType(e) === jsonType(value))) return false;
-    if (isObject(value) && Array.isArray(node.required) && !node.required.every((k) => Object.hasOwn(value, k))) {
+    if (!typeOnly && isObject(value) && Array.isArray(node.required) && !node.required.every((k) => Object.hasOwn(value, k))) {
       return false;
     }
   }
@@ -222,7 +222,12 @@ function validate(node, value, path, root) {
       if (key === "oneOf" && passing > 1) {
         add("matches more than one allowed shape");
       } else if (passing === 0) {
-        const applicable = results.filter((_, i) => isApplicable(branches[i], value, root));
+        let applicable = results.filter((_, i) => isApplicable(branches[i], value, root));
+        // No branch fits fully: fall back to the type alone, so an object missing a
+        // required key still gets its own branch's message ("missing required field").
+        if (applicable.length === 0) {
+          applicable = results.filter((_, i) => isApplicable(branches[i], value, root, { typeOnly: true }));
+        }
         if (applicable.length === 1) {
           errors.push(...applicable[0]);
           branchOnly = true;

@@ -26,10 +26,11 @@ AgentRoster has two parts that ship together:
    - **setup**: output folder (git-ignored), previous run, mode;
    - **map**: find every agent and workflow that calls a model, in any language → `map.md`,
      `coverage.json`;
-   - **cards**: one roster card per agent or workflow, with evidence → `roster.json`;
+   - **cards**: one roster card per agent or workflow, with evidence → `roster.json`, drawn as
+     `cards/<id>.md` and an offline `cards.html`;
    - **assess**: check packs → `findings.json` (what, why, impact, fix) and a 1–5 definition
      score with confidence;
-   - **report**: `cards/<id>.md`, `assessment.md`, `assessment.html`.
+   - **report**: `assessment.md`, `assessment.html` (the cards, a workflow view, the findings).
 
    A run is an inventory plus a configuration review: each agent has its **definition** (the
    card) and its **result** (every check, passed or not). What the scan couldn't see is

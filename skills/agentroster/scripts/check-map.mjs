@@ -106,6 +106,16 @@ const headingIds = (section) =>
   });
 
 /**
+ * The ids in map.md's inventory table, in table order (empty when there is no table).
+ * @param {string} mapText
+ * @returns {string[]}
+ */
+export function inventoryIds(mapText) {
+  const section = readSections(mapText).find((s) => s.title === "Inventory");
+  return section ? readInventory(section).ids : [];
+}
+
+/**
  * Check map.md against coverage.json.
  * @param {string} mapText The text of map.md.
  * @param {object} coverage A valid coverage document.

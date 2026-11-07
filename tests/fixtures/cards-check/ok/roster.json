@@ -1,0 +1,357 @@
+{
+  "roster_file": "0.1",
+  "snapshot": {
+    "id": "run-2026-11-07-1",
+    "taken_at": "2026-11-07T09:00:00Z",
+    "project": "tiny-app",
+    "standard": "0.2",
+    "packs": [],
+    "mode": "standard",
+    "previous": null
+  },
+  "cards": [
+    {
+      "roster": "0.2",
+      "id": "daily-digest",
+      "name": "Daily Digest",
+      "kind": "workflow",
+      "app": "Tiny App",
+      "type": "orchestrator",
+      "secondary": null,
+      "status": null,
+      "purpose": "Collects the day's notes and sends a short digest.",
+      "engine": {
+        "model": null,
+        "effort": null
+      },
+      "runtime": "Python script run by cron",
+      "autonomy": null,
+      "version": null,
+      "icon": null,
+      "definition": null,
+      "ratings": {
+        "ACC": "unrated",
+        "CON": "unrated",
+        "TOOL": "unrated",
+        "PLAN": "unrated",
+        "DISC": "unrated",
+        "COMM": "unrated",
+        "SPD": "unrated",
+        "EFF": "unrated",
+        "overall": "unrated"
+      },
+      "headline_stats": [],
+      "role": null,
+      "goals": [],
+      "persona": null,
+      "instructions": null,
+      "skills": [],
+      "tools": {
+        "allow": [],
+        "deny": [],
+        "mcp": []
+      },
+      "context": [],
+      "memory": {
+        "scope": null,
+        "where": null,
+        "retention": null
+      },
+      "guardrails": {
+        "permission": null,
+        "needs_approval": [],
+        "forbidden": [],
+        "data": null,
+        "limits": {
+          "turns": null,
+          "minutes": 10,
+          "usd": null
+        }
+      },
+      "io": {
+        "in": [],
+        "out": [],
+        "report": null
+      },
+      "handoffs": {
+        "from": [],
+        "to": []
+      },
+      "org": {
+        "reports_to": null,
+        "group": null
+      },
+      "stats": null,
+      "source": {
+        "files": [
+          {
+            "path": "app/digest.py",
+            "line": 5
+          }
+        ],
+        "found_by": "agent"
+      },
+      "evidence": {
+        "purpose": [
+          {
+            "file": "app/digest.py",
+            "line": 1,
+            "quote": "\"\"\"Collect notes and send a digest.\"\"\"",
+            "found_by": "agent"
+          }
+        ],
+        "runtime": [
+          {
+            "file": "app/digest.py",
+            "line": 3,
+            "quote": "# run by cron at 07:00",
+            "found_by": "agent"
+          }
+        ],
+        "guardrails.limits.minutes": [
+          {
+            "file": "app/digest.py",
+            "line": 8,
+            "quote": "TIMEOUT_MINUTES = 10",
+            "found_by": "agent"
+          }
+        ]
+      },
+      "provenance": {
+        "author": null,
+        "created": null,
+        "changed": null,
+        "license": null,
+        "signature": null
+      },
+      "profiles": [],
+      "extensions": {
+        "io.github.captainelzilcho.agentroster.card-view/v1": {
+          "runtime_name": "cron job",
+          "language": "Python",
+          "starts": [
+            "daily 07:00 UTC"
+          ],
+          "steps": [
+            "fetcher"
+          ],
+          "plain_steps": 2,
+          "stated_only": [],
+          "evidence": {
+            "runtime_name": [
+              {
+                "file": "app/digest.py",
+                "line": 3,
+                "quote": "# run by cron at 07:00",
+                "found_by": "agent"
+              }
+            ],
+            "language": [
+              {
+                "file": "app/digest.py",
+                "line": 3,
+                "quote": "# run by cron at 07:00",
+                "found_by": "agent"
+              }
+            ],
+            "starts": [
+              {
+                "file": "app/digest.py",
+                "line": 3,
+                "quote": "# run by cron at 07:00",
+                "found_by": "agent"
+              }
+            ],
+            "steps": [
+              {
+                "file": "app/digest.py",
+                "line": 11,
+                "quote": "notes = fetcher.run()",
+                "found_by": "agent"
+              }
+            ],
+            "plain_steps": [
+              {
+                "file": "app/digest.py",
+                "line": 12,
+                "quote": "digest = summarise(notes)",
+                "found_by": "agent"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "roster": "0.2",
+      "id": "fetcher",
+      "name": "Fetcher",
+      "kind": "agent",
+      "app": "Tiny App",
+      "type": "researcher",
+      "secondary": null,
+      "status": null,
+      "purpose": "Finds today's notes using a search tool.",
+      "engine": {
+        "model": "claude-sonnet-4-5",
+        "effort": null
+      },
+      "runtime": "Python, Anthropic SDK",
+      "autonomy": null,
+      "version": null,
+      "icon": null,
+      "definition": null,
+      "ratings": {
+        "ACC": "unrated",
+        "CON": "unrated",
+        "TOOL": "unrated",
+        "PLAN": "unrated",
+        "DISC": "unrated",
+        "COMM": "unrated",
+        "SPD": "unrated",
+        "EFF": "unrated",
+        "overall": "unrated"
+      },
+      "headline_stats": [],
+      "role": "Searches the notes store and returns the matching notes.",
+      "goals": [
+        "Return every note written today."
+      ],
+      "persona": null,
+      "instructions": null,
+      "skills": [],
+      "tools": {
+        "allow": [
+          "search_notes"
+        ],
+        "deny": [],
+        "mcp": []
+      },
+      "context": [],
+      "memory": {
+        "scope": null,
+        "where": null,
+        "retention": null
+      },
+      "guardrails": {
+        "permission": null,
+        "needs_approval": [],
+        "forbidden": [
+          "change a note"
+        ],
+        "data": null,
+        "limits": {
+          "turns": 5,
+          "minutes": null,
+          "usd": null
+        }
+      },
+      "io": {
+        "in": [],
+        "out": [],
+        "report": null
+      },
+      "handoffs": {
+        "from": [],
+        "to": []
+      },
+      "org": {
+        "reports_to": "daily-digest",
+        "group": null
+      },
+      "stats": null,
+      "source": {
+        "files": [
+          {
+            "path": "app/fetcher.py",
+            "line": 12
+          }
+        ],
+        "found_by": "script"
+      },
+      "evidence": {
+        "purpose": [
+          {
+            "file": "app/fetcher.py",
+            "line": 1,
+            "quote": "\"\"\"Fetcher: finds today's notes.\"\"\"",
+            "found_by": "agent"
+          }
+        ],
+        "role": [
+          {
+            "file": "app/fetcher.py",
+            "line": 14,
+            "quote": "tools=[SEARCH_NOTES]",
+            "found_by": "agent"
+          }
+        ],
+        "engine.model": [
+          {
+            "file": "app/fetcher.py",
+            "line": 6,
+            "quote": "MODEL = \"claude-sonnet-4-5\"",
+            "found_by": "agent"
+          }
+        ],
+        "runtime": [
+          {
+            "file": "app/fetcher.py",
+            "line": 4,
+            "quote": "import anthropic",
+            "found_by": "script"
+          }
+        ],
+        "tools.allow": [
+          {
+            "file": "app/fetcher.py",
+            "line": 9,
+            "quote": "\"name\": \"search_notes\",",
+            "found_by": "agent"
+          }
+        ],
+        "guardrails.limits.turns": [
+          {
+            "file": "app/fetcher.py",
+            "line": 7,
+            "quote": "MAX_TURNS = 5",
+            "found_by": "agent"
+          }
+        ],
+        "guardrails.forbidden": [
+          {
+            "file": "app/fetcher.py",
+            "line": 3,
+            "quote": "# never change a note",
+            "found_by": "agent"
+          }
+        ],
+        "org.reports_to": [
+          {
+            "file": "app/digest.py",
+            "line": 11,
+            "quote": "notes = fetcher.run()",
+            "found_by": "agent"
+          }
+        ],
+        "goals": [
+          {
+            "file": "app/fetcher.py",
+            "line": 2,
+            "quote": "# goal: every note written today",
+            "found_by": "agent"
+          }
+        ]
+      },
+      "provenance": {
+        "author": null,
+        "created": null,
+        "changed": null,
+        "license": null,
+        "signature": null
+      },
+      "profiles": [],
+      "extensions": {}
+    }
+  ]
+}

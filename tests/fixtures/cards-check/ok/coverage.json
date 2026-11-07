@@ -1,0 +1,80 @@
+{
+  "coverage": "0.2",
+  "snapshot": {
+    "id": "run-2026-11-07-1",
+    "taken_at": "2026-11-07T09:00:00Z",
+    "project": "tiny-app",
+    "standard": "0.2",
+    "packs": [],
+    "mode": "standard",
+    "previous": null
+  },
+  "summary": {
+    "candidates": 2,
+    "read": 2,
+    "not_read": 0,
+    "not_understood": 0,
+    "cards": 2,
+    "no_agent": 0,
+    "needs_checking": 0,
+    "unknowns": 1
+  },
+  "candidates": [
+    {
+      "file": "app/digest.py",
+      "line": 11,
+      "signals": [
+        "llm-call"
+      ],
+      "detail": null,
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "daily-digest"
+      ],
+      "note": null,
+      "found_by": "agent",
+      "validation": {
+        "status": "validated",
+        "rounds": 1
+      }
+    },
+    {
+      "file": "app/fetcher.py",
+      "line": 4,
+      "signals": [
+        "llm-import"
+      ],
+      "detail": null,
+      "status": "read",
+      "reason": null,
+      "outcome": "cards",
+      "cards": [
+        "fetcher"
+      ],
+      "note": null,
+      "found_by": "script",
+      "validation": {
+        "status": "validated",
+        "rounds": 1
+      }
+    }
+  ],
+  "unknowns": [
+    {
+      "card": "fetcher",
+      "field": "instructions",
+      "reason": "loaded-from-database",
+      "detail": "The prompt is read from the prompts table.",
+      "evidence": [
+        {
+          "file": "app/fetcher.py",
+          "line": 10,
+          "quote": "system = load_prompt(\"fetcher\")",
+          "found_by": "agent"
+        }
+      ]
+    }
+  ]
+}

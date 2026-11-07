@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent cards</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<main>
+<header class="page-head">
+<div>
+<h1>Agent cards</h1>
+<p>{{COUNTS}}</p>
+<p class="run">{{RUN}}</p>
+</div>
+<button class="theme" type="button" aria-label="Switch between dark and light">Dark / light</button>
+</header>
+{{CARDS}}
+</main>
+<script>
+(function () {
+  var root = document.documentElement, key = "agentroster-theme";
+  try { var saved = localStorage.getItem(key); if (saved === "light") root.setAttribute("data-theme", "light"); } catch (e) {}
+  document.querySelector(".theme").addEventListener("click", function () {
+    var light = root.getAttribute("data-theme") !== "light";
+    if (light) root.setAttribute("data-theme", "light"); else root.removeAttribute("data-theme");
+    try { localStorage.setItem(key, light ? "light" : "dark"); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

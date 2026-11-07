@@ -62,6 +62,14 @@ export const invalidCases = [
     message: "is not one of none, run, project, local, user",
   },
   {
+    name: "measured-rating-missing-key",
+    card: with_((c) => {
+      c.ratings.ACC = { value: 80, test: "t", date: "2026-11-01", tasks: 10 };
+    }),
+    path: "/ratings/ACC",
+    message: 'missing required field "tries"',
+  },
+  {
     name: "rating-over-99",
     card: with_((c) => {
       c.ratings.ACC = { value: 120, test: "t", date: "2026-11-01", tasks: 10, tries: 3 };

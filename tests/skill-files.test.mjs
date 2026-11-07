@@ -175,3 +175,31 @@ test("MAP.md and VALIDATION.md point the agent search at the section 5 rule", ()
 test("README does not claim the skill never copies a secret", () => {
   assert.doesNotMatch(fs.readFileSync("README.md", "utf8"), /never copies a secret/);
 });
+
+test("CARDS.md exists and every script it names exists", () => {
+  assert.ok(exists("CARDS.md"));
+  for (const s of scriptsNamed(read("CARDS.md"))) assert.ok(exists(`scripts/${s}`), `scripts/${s} exists`);
+  for (const n of notesNamed(read("CARDS.md"))) assert.ok(exists(`ecosystems/${n}`), `ecosystems/${n} exists`);
+});
+
+test("CARDS.md names the card-view extension exactly as check-cards.mjs exports it", async () => {
+  const { CARD_VIEW_NS } = await import("../skills/agentroster/scripts/check-cards.mjs");
+  assert.ok(read("CARDS.md").includes(CARD_VIEW_NS));
+});
+
+test("SKILL.md says the cards phase is built and names its scripts", () => {
+  const text = read("SKILL.md");
+  assert.match(text, /^\| Cards \|[^\n]*\| yes \|$/m);
+  for (const s of ["validate-card.mjs", "check-cards.mjs", "render-cards.mjs"]) {
+    assert.ok(scriptsNamed(text).includes(s), `SKILL.md names scripts/${s}`);
+  }
+  assert.doesNotMatch(text, /Stop after the map and say so/);
+});
+
+test("VALIDATION.md says what the validator checks for cards", () => {
+  assert.match(read("VALIDATION.md"), /^## [0-9]+\. What the validator checks \(cards\)$/m);
+});
+
+test("CARDS.md never tells the agent to use per-item evidence keys like goals.0", () => {
+  assert.doesNotMatch(read("CARDS.md"), /goals\.0/);
+});

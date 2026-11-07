@@ -1,15 +1,16 @@
 ---
 name: agentroster
-description: Map every AI agent and model workflow in a project, in any language, and record what each one uses (model, prompts, tools, skills, data, trigger) with file and line. Use when the user asks to map, list, inventory or audit the agents, LLM calls, subagents or AI workflows in a codebase, or to make roster cards for them. Reads the project without running it, checks its output for secrets, and writes map.md and coverage.json to a git-ignored run folder.
+description: Map every AI agent and model workflow in a project, in any language, and record what each one uses (model, prompts, tools, skills, data, trigger) with file and line. Use when the user asks to map, list, inventory or audit the agents, LLM calls, subagents or AI workflows in a codebase, or to make roster cards for them. Reads the project without running it, checks its output for secrets, and writes the map (map.md, coverage.json) and a roster card for each agent (roster.json, cards/*.md, cards.html) to a git-ignored run folder.
 ---
 
 # AgentRoster
 
-AgentRoster finds every agent and workflow in a project that calls a model, and writes a map of
-them. Later phases turn the map into roster cards and check how well each one is defined.
+AgentRoster finds every agent and workflow in a project that calls a model, writes a map of
+them, and turns the map into roster cards. A later phase will check how well each one is defined.
 
 You read the project; you never run it. Follow this file from top to bottom. The method for the
-map is in `MAP.md`, and the checking loop is in `VALIDATION.md`, both in this folder.
+map is in `MAP.md`, the method for the cards is in `CARDS.md`, and the checking loop is in
+`VALIDATION.md`, all in this folder.
 
 ## What is built
 
@@ -17,12 +18,12 @@ map is in `MAP.md`, and the checking loop is in `VALIDATION.md`, both in this fo
 |---|---|---|
 | Setup | the run folder, the run id, the mode | yes |
 | Map | `detect.json`, `map.md`, `coverage.json` | yes |
-| Cards | one roster card per agent and workflow, `roster.json` | not yet |
+| Cards | one roster card per agent and workflow: `roster.json`, `cards/<id>.md`, `cards.html` | yes |
 | Assess | `findings.json` and a definition score | not yet |
-| Report | `cards/<id>.md`, `assessment.md`, `assessment.html` | not yet |
+| Report | `assessment.md`, `assessment.html`, the workflow view | not yet |
 
-**Stop after the map and say so.** Tell the user that the cards, assess and report phases are
-not built yet. Do not write cards, findings or reports by hand.
+**Stop after the cards and say so.** Tell the user that the assess and report phases are not
+built yet. Do not write findings or reports by hand.
 
 ## Rules for the whole run
 
@@ -53,11 +54,14 @@ node <skill>/scripts/detect.mjs <scope> --out <run>/detect.json --exclude <outpu
 node <skill>/scripts/validate-coverage.mjs <run>/coverage.json
 node <skill>/scripts/check-map.mjs <run>
 node <skill>/scripts/redact-check.mjs <run> --project <project>
+node <skill>/scripts/validate-card.mjs <run>/roster.json
+node <skill>/scripts/check-cards.mjs <run>
+node <skill>/scripts/render-cards.mjs <run>
 ```
 
-Exit codes: `0` ok and `2` a file or folder could not be used, for all four. `1` (problems
-found, listed on screen) comes only from `validate-coverage.mjs`, `check-map.mjs` and
-`redact-check.mjs`; `detect.mjs` exits `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
+Exit codes: `0` ok and `2` a file or folder could not be used, for all seven. `1` (problems
+found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `redact-check.mjs`,
+`validate-card.mjs` and `check-cards.mjs`; `detect.mjs` and `render-cards.mjs` exit `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
 
 ## Step 1: setup
 
@@ -92,7 +96,7 @@ The snapshot in `coverage.json` comes from this step:
 | `taken_at` | the time the run started, in UTC, from the system clock (for example `date -u +%Y-%m-%dT%H:%M:%SZ`); if no clock is available, say so in the `map.md` summary |
 | `project` | the project's name (folder or package name), never a path |
 | `standard` | `"0.2"` |
-| `packs` | `[]` (no check packs run in the map phase) |
+| `packs` | `[]` (no check packs run in the map and cards phases) |
 | `mode` | `standard`, `quick` or `thorough` |
 | `previous` | the previous run's id, or `null` |
 
@@ -137,7 +141,14 @@ decide the inventory, and write `map.md` and `coverage.json` in the run folder.
 3. A failed script is fixed and run again. If you can't fix it, stop and tell the user what
    failed. A run never finishes with a known leak or an invalid file.
 
-## Step 5: tell the user
+## Step 5: the cards
+
+Follow `CARDS.md`. It says how to write one card per agent and workflow in the map into
+`roster.json`, with evidence for every value, then check the cards (`validate-card.mjs`,
+`check-cards.mjs`, the validator in `VALIDATION.md` section 3, `redact-check.mjs`) and draw them
+(`render-cards.mjs`). The roster's snapshot is the same as `coverage.json`'s.
+
+## Step 6: tell the user
 
 Say, in a few short lines:
 
@@ -145,4 +156,6 @@ Say, in a few short lines:
 - how many agents and workflows were found, and how many candidates were checked;
 - what is unknown and what needs checking, if anything;
 - how many files were skipped, and why;
-- that the cards, assess and report phases are not built yet, so the run stops after the map.
+- where the cards are (`cards.html` to open in a browser, `cards/` for one Markdown file each);
+- any warning from the cards phase (a hand card whose file name doesn't match its id);
+- that the assess and report phases are not built yet, so the run stops after the cards.
