@@ -454,3 +454,25 @@ test("URL args: only the query is read, not the path", () => {
   put(dir, "map.md", "server https://x.test/mcp?api_key=FAKE-query-key-value-2\n");
   assert.equal(run(dir, "--project", root).status, 1);
 });
+
+test("URL rule applies only to bare URLs; credentials and flag values are kept", () => {
+  const root = tmp();
+  const pw = "FAKE-url-password-5";
+  put(root, ".mcp.json", JSON.stringify({
+    mcpServers: {
+      a: { args: ["--token=https://x.test/FAKE-token-path-4?a=1"] },
+      b: { args: [`--auth-url=https://user:${pw}@x.test`] },
+      c: { args: [`https://user:${pw}2@x.test/mcp`] },
+      d: { args: ["--api-key", "https://x.test/p?v=FAKE-after-key-6"] },
+      e: { args: ["https://example.test/oauth/mcp"] },
+      f: { args: ["SOME_NAME=https://u:FAKE-name-pw-7@x.test"] },
+    },
+  }));
+  const v = readConfigValues(root);
+  for (const want of ["https://x.test/FAKE-token-path-4?a=1", pw, pw + "2", "https://x.test/p?v=FAKE-after-key-6", "FAKE-name-pw-7"]) {
+    assert.ok(v.includes(want), want);
+  }
+  const dir = tmp();
+  put(dir, "map.md", "server https://example.test/oauth/mcp\n");
+  assert.equal(run(dir, "--project", root).status, 0);
+});

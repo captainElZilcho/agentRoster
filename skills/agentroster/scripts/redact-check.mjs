@@ -240,19 +240,36 @@ function stripJsonc(text) {
 const SECRET_WORDS = /key|token|secret|password|auth|header/i;
 const QUERY_SECRET = /[?&](?:key|api_key|apikey|token|access_token|secret|password|auth)=([^&#]+)/gi;
 
+const BARE_URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
+
+/** A bare URL gives its query secrets and its user name and password, not its path words. */
+function collectUrl(url, out) {
+  for (const m of url.matchAll(QUERY_SECRET)) out.add(m[1]);
+  try {
+    const u = new URL(url);
+    for (const part of [u.password, u.username]) {
+      if (part.length >= MIN_ENV_LENGTH) out.add(part);
+      try {
+        const plain = decodeURIComponent(part);
+        if (plain.length >= MIN_ENV_LENGTH) out.add(plain);
+      } catch {}
+    }
+  } catch {}
+}
+
 /**
  * Collect secrets passed as command arguments: "--api-key VALUE", "--token=VALUE",
- * "--header 'Authorization: Bearer VALUE'", and "?api_key=VALUE" in a URL.
+ * "--header 'Authorization: Bearer VALUE'", and "?api_key=VALUE" or user:password in a URL.
  */
 function collectArgs(args, out) {
   args.forEach((arg, i) => {
     if (typeof arg !== "string") return;
-    // A URL gives only its query secrets; its path words (such as /oauth/) are not secrets.
-    if (arg.includes("://")) {
-      for (const m of arg.matchAll(QUERY_SECRET)) out.add(m[1]);
+    if (BARE_URL.test(arg)) {
+      collectUrl(arg, out);
       return;
     }
-    const eq = /^--?([^=\s]+)=(.*)$/s.exec(arg);
+    const eq = /^(?:--?)?([^=\s]+)=(.*)$/s.exec(arg);
+    if (eq && BARE_URL.test(eq[2])) collectUrl(eq[2], out);
     if (eq && SECRET_WORDS.test(eq[1])) out.add(eq[2]);
     else if (SECRET_WORDS.test(arg) && typeof args[i + 1] === "string") out.add(args[i + 1]);
     if (SECRET_WORDS.test(arg)) {
