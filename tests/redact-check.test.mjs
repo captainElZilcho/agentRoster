@@ -141,7 +141,7 @@ test("CLI: a link in the run folder is a failure, and it is not followed", () =>
   fs.symlinkSync(path.join(outside, "leak.md"), path.join(dir, "cards", "a.md"));
   const r = run(dir);
   assert.equal(r.status, 1);
-  assert.equal(r.stdout, "leak: cards/a.md (link)\nleak: linkdir (link)\nleak: linkfile.md (link)\nleaks: 3\n");
+  assert.equal(r.stdout, "blocked: cards/a.md (link in the run folder)\nblocked: linkdir (link in the run folder)\nblocked: linkfile.md (link in the run folder)\nblocked: 3\n");
   assert.ok(!r.stdout.includes("secret-shaped"));
 });
 
@@ -152,7 +152,7 @@ test("CLI: a named pipe in the run folder is a failure", () => {
   if (made.status !== 0) return;
   const r = run(dir);
   assert.equal(r.status, 1);
-  assert.equal(r.stdout, "leak: pipe (not a regular file)\nleaks: 1\n");
+  assert.equal(r.stdout, "blocked: pipe (not a regular file)\nblocked: 1\n");
 });
 
 test("CLI: files named like secrets and git-ignored run folders are still scanned", () => {
@@ -433,4 +433,24 @@ test("CLI: no linked .env files prints nothing on stderr", () => {
   const r = run(dir, "--project", project);
   assert.equal(r.status, 0);
   assert.equal(r.stderr, "");
+});
+
+test("URL args: only the query is read, not the path", () => {
+  const root = tmp();
+  put(root, ".mcp.json", JSON.stringify({
+    mcpServers: {
+      a: { args: ["https://example.test/oauth/mcp", "FAKE-next-after-url-1"] },
+      b: { args: ["https://x.test/mcp?api_key=FAKE-query-key-value-2"] },
+      c: { args: ["--header", "Authorization: Bearer FAKE-header-token-3", "Authorization:"] },
+    },
+  }));
+  const v = readConfigValues(root);
+  assert.ok(!v.some((x) => /example\.test|FAKE-next-after-url/.test(x)));
+  assert.ok(v.includes("FAKE-query-key-value-2"));
+  assert.ok(v.includes("FAKE-header-token-3"));
+  const dir = tmp();
+  put(dir, "map.md", "server https://example.test/oauth/mcp\n");
+  assert.equal(run(dir, "--project", root).status, 0);
+  put(dir, "map.md", "server https://x.test/mcp?api_key=FAKE-query-key-value-2\n");
+  assert.equal(run(dir, "--project", root).status, 1);
 });

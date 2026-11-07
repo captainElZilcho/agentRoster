@@ -247,12 +247,18 @@ const QUERY_SECRET = /[?&](?:key|api_key|apikey|token|access_token|secret|passwo
 function collectArgs(args, out) {
   args.forEach((arg, i) => {
     if (typeof arg !== "string") return;
+    // A URL gives only its query secrets; its path words (such as /oauth/) are not secrets.
+    if (arg.includes("://")) {
+      for (const m of arg.matchAll(QUERY_SECRET)) out.add(m[1]);
+      return;
+    }
     const eq = /^--?([^=\s]+)=(.*)$/s.exec(arg);
     if (eq && SECRET_WORDS.test(eq[1])) out.add(eq[2]);
     else if (SECRET_WORDS.test(arg) && typeof args[i + 1] === "string") out.add(args[i + 1]);
     if (SECRET_WORDS.test(arg)) {
       const cut = Math.max(arg.lastIndexOf(" "), arg.lastIndexOf(":"), arg.lastIndexOf("="));
-      if (cut !== -1) out.add(arg.slice(cut + 1).trim());
+      const tail = cut === -1 ? "" : arg.slice(cut + 1).trim();
+      if (tail !== "") out.add(tail);
     }
     for (const m of arg.matchAll(QUERY_SECRET)) out.add(m[1]);
   });
@@ -357,12 +363,11 @@ export function runRedactCheckCli(args) {
     }
     const leaks = findLeaks(files, envValues, configValues);
     // A link or other odd entry could hide or point at anything, so it fails the run.
-    for (const o of odd) console.log(`leak: ${o.path} (${o.kind})`);
+    for (const o of odd) console.log(`blocked: ${o.path} (${o.kind === "link" ? "link in the run folder" : o.kind})`);
     for (const l of leaks) console.log(`leak: ${l.file}:${l.line} (${l.kind})`);
-    if (odd.length + leaks.length > 0) {
-      console.log(`leaks: ${odd.length + leaks.length}`);
-      return 1;
-    }
+    if (odd.length > 0) console.log(`blocked: ${odd.length}`);
+    if (leaks.length > 0) console.log(`leaks: ${leaks.length}`);
+    if (odd.length + leaks.length > 0) return 1;
     console.log(`clean: ${names.length} files`);
     return 0;
   } catch (err) {
