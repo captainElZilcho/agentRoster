@@ -245,16 +245,18 @@ const BARE_URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
 /** A bare URL gives its query secrets and its user name and password, not its path words. */
 function collectUrl(url, out) {
   for (const m of url.matchAll(QUERY_SECRET)) out.add(m[1]);
-  try {
-    const u = new URL(url);
-    for (const part of [u.password, u.username]) {
-      if (part.length >= MIN_ENV_LENGTH) out.add(part);
-      try {
-        const plain = decodeURIComponent(part);
-        if (plain.length >= MIN_ENV_LENGTH) out.add(plain);
-      } catch {}
-    }
-  } catch {}
+  // A regex, not new URL(): a URL that will not parse (a bad port) must still give its password.
+  const userinfo = /^[a-z][a-z0-9+.-]*:\/\/([^/?#@]*)@/i.exec(url)?.[1];
+  if (userinfo === undefined) return;
+  const colon = userinfo.indexOf(":");
+  const parts = colon === -1 ? [userinfo] : [userinfo.slice(0, colon), userinfo.slice(colon + 1)];
+  for (const part of parts) {
+    let plain = part;
+    try {
+      plain = decodeURIComponent(part);
+    } catch {}
+    for (const v of [part, plain]) if (v.length >= MIN_ENV_LENGTH) out.add(v);
+  }
 }
 
 /**

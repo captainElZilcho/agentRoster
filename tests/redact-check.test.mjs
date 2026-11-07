@@ -476,3 +476,10 @@ test("URL rule applies only to bare URLs; credentials and flag values are kept",
   put(dir, "map.md", "server https://example.test/oauth/mcp\n");
   assert.equal(run(dir, "--project", root).status, 0);
 });
+
+test("URL credentials are read even when the URL will not parse", () => {
+  const root = tmp();
+  const pw = "FAKE-bad-port-pw-8";
+  put(root, ".mcp.json", JSON.stringify({ mcpServers: { a: { args: [`https://user:${pw}@x.test:99999/mcp`] } } }));
+  assert.ok(readConfigValues(root).includes(pw));
+});
