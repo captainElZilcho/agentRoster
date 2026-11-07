@@ -74,10 +74,18 @@ order). A single model call that the code runs at a fixed point (no tool loop, t
 nothing) is kind `workflow`. It gets its own card when it has its own job, and that card reports
 to the pipeline's workflow card when a pipeline runs it.
 
-**Ids.** Lower case, words joined by hyphens, from the name the code or its prompt uses (a class,
-function, file, `name` field or the role in the prompt), for example `ticket-triage`. Each id is
-used once. If the previous run has the same agent, reuse its id. A hand card's id wins. The cards
-phase keeps these ids.
+**Ids.** Lower case, words joined by hyphens, for example `ticket-triage`. Take the first of
+these that exists:
+
+1. a hand card's `id`;
+2. a `name` field the code or file gives (`name="triage"`, frontmatter `name: triage`);
+3. the variable, function or class name the code binds the agent to (`triage = Agent(…)` gives
+   `triage`);
+4. the file name, without its extension;
+5. only then, the role text in the prompt.
+
+Each id is used once. If the previous run has the same agent, reuse its id. The cards phase keeps
+these ids.
 
 ## 4. General rules
 
@@ -106,6 +114,11 @@ These hold for any project.
   `tools.allow` / `tools.deny`, never in `permission`.
 - **The job decides the type,** not the agent's name for itself.
 - **The main prompt is the agent's instructions.** A shared skill file appended to it is a skill.
+- **A line that only loads a prompt from outside the repo** (a database, a URL, an env variable)
+  is evidence for the unknown on `instructions`, not a candidate of its own.
+- **A config file that names models** (for example `models.toml` or a settings file) is evidence
+  for `engine.model`, not a candidate. A config file that defines agents or tasks (for example
+  CrewAI's YAML files) is a candidate.
 - **A hand card's value wins** (section 6).
 
 ## 5. Candidates
@@ -125,6 +138,9 @@ not it leads to a card.
   outcome `no-agent` with a note saying why. Places you find are added with
   `found_by: "agent"`, a `signals` list (`llm-import`, `llm-call`, `prompt-file`, `other`, …) and
   a short `detail`.
+- **`skill-file` or `prompt-file`.** A shared text file appended into prompts as a skill has
+  signal `skill-file`, even when it is not named `SKILL.md`. `prompt-file` is for a file that is
+  one agent's own prompt or role.
 - **When the agent search adds a candidate.** Add one for a model call only in a file that has no
   candidate yet (for example a call through a homemade wrapper, or a plain HTTP call). In a file
   that already has a candidate, an agent-definition or call line (`Agent(...)`, `Crew(...)`,
@@ -167,7 +183,9 @@ An unknown is a part of a definition the scan could not see. Record it as
   `unparsable`, `unsupported-framework` or `other`;
 - `field`: the card field, for example `instructions` or `engine.model`;
 - `evidence`: at least one `{file, line, quote, found_by}` pointing at the line that loads it.
-  The quote is copied from the file, with any secret replaced by `[redacted]`.
+  For a value the code leaves unset (for example no model given), cite the line where it would
+  be set, such as the options object or the constructor call. The quote is copied from the
+  file, with any secret replaced by `[redacted]`.
 
 Unknown is not missing. "We could not see it" and "it is not there" are different answers.
 

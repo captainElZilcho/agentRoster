@@ -61,8 +61,8 @@ found, listed on screen) comes only from `validate-coverage.mjs`, `check-map.mjs
 
 ## Step 1: setup
 
-1. **Project root.** In a git repository, the root is the nearest folder, from the current one
-   upward, that holds a `.git` entry. Otherwise it is the folder the user named, or the current
+1. **Project root.** The folder the user names is the project. When they name none, it is the
+   nearest folder, from the current one upward, that holds a `.git` entry; else the current
    folder.
 2. **Scope.** The whole project, unless the user names a folder. If they do, the scope is that
    folder. Paths in the output are always from the project root.
@@ -71,7 +71,8 @@ found, listed on screen) comes only from `validate-coverage.mjs`, `check-map.mjs
    within a day, so take the next free number).
 4. **Git-ignore check.** In a git repository, when the output folder is inside the project, run
    exactly `git -c core.fsmonitor=false -c core.hooksPath=/dev/null check-ignore --no-index -q <run>/map.md`
-   (the two settings stop git from running a command the project's own config names). Exit code
+   from the output folder's parent folder (the two settings stop git from running a command the
+   project's own config names). Exit code
    `0` means git ignores it. Anything else means it
    does not: **stop and ask the user** to add the output folder to `.gitignore` (for example a
    line `.agentroster/`) or to pick another folder. Do not go on until the check passes. If the
@@ -88,7 +89,7 @@ The snapshot in `coverage.json` comes from this step:
 | Field | Value |
 |---|---|
 | `id` | the run folder name, for example `run-2026-11-05-1` |
-| `taken_at` | the time the run started, UTC, ISO 8601, ending in `Z` |
+| `taken_at` | the time the run started, in UTC, from the system clock (for example `date -u +%Y-%m-%dT%H:%M:%SZ`); if no clock is available, say so in the `map.md` summary |
 | `project` | the project's name (folder or package name), never a path |
 | `standard` | `"0.2"` |
 | `packs` | `[]` (no check packs run in the map phase) |

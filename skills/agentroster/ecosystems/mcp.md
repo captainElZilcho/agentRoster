@@ -28,7 +28,8 @@ agent gets which server's tools.
   tokens: never copy their values; record the variable names only.
 - **The tools** a server gives are in its code (if it is in the repo) or not visible (a package or
   a remote URL). A server whose code is not in the repo gives tools you can't list: record an
-  unknown (`outside-repo` for a package, `loaded-from-url` for a remote server).
+  unknown (`outside-repo` for a package, `loaded-from-url` for a remote server) on the field
+  `tools.mcp` of each agent that uses the server.
 - **Tool names** as agents see them: `mcp__<server>__<tool>` in Claude Code and the Claude Agent
   SDK. A subagent's `tools` list or the SDK's `allowed_tools` may name them one by one.
 

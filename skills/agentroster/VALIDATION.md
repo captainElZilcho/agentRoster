@@ -19,8 +19,9 @@ built.
 **How to run the validator.** If you can start helper agents (subagents), start one for each
 validator task and give it only the inputs above, as file paths. If you can't, run a separate
 pass yourself: set your earlier reasoning aside, re-read the files from disk, and follow the
-checklist as if you had not seen the project before. Say which way it ran in the `map.md`
-summary.
+checklist as if you had not seen the project before. Even then, run the missed-agent hunt
+(task B) as its own step: re-read the project from the file list (`detect.json` and the files
+git lists), not from your own notes. Say which way it ran in the `map.md` summary.
 
 The validator only reports. It never edits the output or the project. It follows the same rules
 as the finder: read only, never fetch, never open secret files, never copy a secret.

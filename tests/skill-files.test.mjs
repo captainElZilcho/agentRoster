@@ -127,6 +127,10 @@ test("the Claude Code note lists CLAUDE.md as context unless omitClaudeMd is set
   assert.match(read("ecosystems/claude-code.md"), /omitClaudeMd: true/);
 });
 
+test("MAP.md gives the id order, starting from a hand card's id", () => {
+  assert.match(read("MAP.md"), /1\. a hand card's `id`;\s+2\. a `name` field/);
+});
+
 test("no note calls a single fixed model call an agent", () => {
   for (const f of markdownFiles()) {
     assert.doesNotMatch(read(f), /even with no tools|kind agent\), but the model chooses nothing|kind agent, that chooses nothing/, f);
