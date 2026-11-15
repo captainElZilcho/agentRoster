@@ -1,7 +1,8 @@
 # Contributing
 
-AgentRoster is at an early stage: the roster card standard is a v0.2 draft and the skill is not
-built yet. Issues and discussion are welcome,
+AgentRoster is at an early stage: the roster card standard is a v0.2 draft, and the skill's map
+and cards phases are built; the assess and report phases are not yet. Issues and discussion are
+welcome,
 especially on the spec, the agent types and the assessment checks.
 
 - **Spec changes:** open an issue first. The core changes only with a new standard version;
