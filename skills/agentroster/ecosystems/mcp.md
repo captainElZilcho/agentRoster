@@ -32,6 +32,10 @@ agent gets which server's tools.
   `tools.mcp` of each agent that uses the server.
 - **Tool names** as agents see them: `mcp__<server>__<tool>` in Claude Code and the Claude Agent
   SDK. A subagent's `tools` list or the SDK's `allowed_tools` may name them one by one.
+- **On the card,** `tools.mcp` holds the MCP tool names when the agent names its tools
+  (`mcp__issues__get_issue`), and the server name (`issues`) only when it may use the whole
+  server. An MCP tool goes in `tools.mcp` only, not in `tools.allow`, even when the same `tools`
+  line lists it with the other tools (the card check reports an `mcp__` name in `tools.allow`).
 
 ## Agent or workflow
 

@@ -54,8 +54,7 @@
   "tools": {
     "allow": [
       "Agent",
-      "Read",
-      "mcp__opshub__fleet"
+      "Read"
     ],
     "deny": [
       "Write",
@@ -63,7 +62,7 @@
       "Bash"
     ],
     "mcp": [
-      "opshub"
+      "mcp__opshub__fleet"
     ]
   },
   "context": [
@@ -94,11 +93,11 @@
   },
   "io": {
     "in": [
-      "text"
+      "text/plain"
     ],
     "out": [
-      "text",
-      "json"
+      "text/plain",
+      "application/json"
     ],
     "report": "plan, picks with draft records, results, what waits on the user"
   },

@@ -163,6 +163,12 @@ export function checkMap(mapText, coverage) {
       if (!seen.has(u.card)) errors.push(`unknown "${u.card}.${u.field}": card "${u.card}" is not in the inventory`);
     }
   }
+  // The previous run is found by the date in the run id, so it must be the run's UTC date.
+  const idDate = /^run-(\d{4}-\d{2}-\d{2})-\d+$/.exec(coverage.snapshot?.id ?? "")?.[1];
+  const takenDate = String(coverage.snapshot?.taken_at ?? "").slice(0, 10);
+  if (idDate && takenDate && idDate !== takenDate) {
+    errors.push(`run id "${coverage.snapshot.id}" is dated ${idDate} but taken_at is ${takenDate} (UTC): take both from one clock reading`);
+  }
   return { valid: errors.length === 0, errors };
 }
 

@@ -26,7 +26,9 @@ Subagent frontmatter (read the file; only record keys that are there):
 - `tools`: a comma-separated list of tool names (`Read, Grep, Bash`, `mcp__<server>__<tool>`,
   `Agent(<name>, …)` to limit which subagents it may start). No `tools` key means it inherits
   every tool available to subagents; record that as written, not as a list. The list goes in
-  `tools.allow` (and `disallowedTools` in `tools.deny`), never in permission;
+  `tools.allow` (and `disallowedTools` in `tools.deny`), never in permission. The `mcp__…` names
+  in it go to `tools.mcp` as tool names, not in `tools.allow`; the server name goes there only
+  when the agent may use the whole server (`ecosystems/mcp.md`);
 - `model`: `sonnet`, `opus`, `haiku`, `fable`, a full model id, or `inherit`;
 - `permissionMode`: the declared permission setting, so it sets `guardrails.permission`. Values:
   `default` (`manual` is another name for it), `acceptEdits`, `auto`, `dontAsk`,
@@ -39,7 +41,13 @@ Subagent frontmatter (read the file; only record keys that are there):
 
 **Context.** Custom subagents get the user, project and local `CLAUDE.md` files by default. List
 the project's `CLAUDE.md` under the card's `context`, unless the subagent sets
-`omitClaudeMd: true`. (The built-in Explore and Plan agents skip it, but they are not project
+`omitClaudeMd: true`.
+
+**A developer's own settings.** Subagents, skills and commands in the repo's `.claude/` run inside
+each developer's Claude Code session, which also loads that developer's user-level settings
+(`~/.claude/`: skills, `CLAUDE.md`, settings). Those differ per developer and are not part of the
+project: record them as one line in `map.md`'s Summary, not an unknown on each card. An app that
+runs an agent with the Agent SDK is different (`claude-agent-sdk.md`). (The built-in Explore and Plan agents skip it, but they are not project
 files.)
 
 Skill frontmatter: `name`, `description`, and optional keys such as `allowed-tools`, `model`,

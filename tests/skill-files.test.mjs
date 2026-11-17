@@ -203,3 +203,147 @@ test("VALIDATION.md says what the validator checks for cards", () => {
 test("CARDS.md never tells the agent to use per-item evidence keys like goals.0", () => {
   assert.doesNotMatch(read("CARDS.md"), /goals\.0/);
 });
+
+test("MAP.md puts the prompt's role text before the file name in the id order", () => {
+  const text = read("MAP.md");
+  assert.match(text, /4\. the role the prompt gives the agent[^\n]*\n(?:[^\n]*\n)*?5\. (?:only then, )?the file name/);
+});
+
+test("references/types.md holds the standard's agent types section, word for word", () => {
+  const section = (text) => {
+    const start = text.indexOf("## 1. Agent types");
+    assert.ok(start >= 0, "has the Agent types heading");
+    const end = text.indexOf("\n## 2.", start);
+    return (end === -1 ? text.slice(start) : text.slice(start, end)).trim();
+  };
+  const spec = fs.readFileSync("spec/roster-card-standard-v0.2.md", "utf8");
+  assert.equal(section(read("references/types.md")), section(spec));
+});
+
+test("CARDS.md points to references/types.md where the type is chosen", () => {
+  assert.match(read("CARDS.md"), /references\/types\.md/);
+});
+
+test("CARDS.md says what role holds for an agent and for a workflow", () => {
+  const text = read("CARDS.md");
+  const at = text.indexOf("**`role`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about role");
+  const bullet = text.slice(at, text.indexOf("\n- **", at + 1));
+  assert.match(bullet, /For an agent/);
+  assert.match(bullet, /For a workflow/);
+  assert.match(bullet, /plain code/);
+});
+
+test("CARDS.md says io holds media types, as A2A does", () => {
+  const text = read("CARDS.md");
+  const at = text.indexOf("**`io.in` and `io.out`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about io");
+  const bullet = text.slice(at, text.indexOf("\n- **", at + 1));
+  assert.match(bullet, /text\/plain/);
+  assert.match(bullet, /application\/json/);
+  assert.match(bullet, /trigger/);
+});
+
+test("CARDS.md asks for evidence for the name", () => {
+  assert.match(read("CARDS.md"), /\*\*`name`\*\*[\s\S]{0,200}evidence/);
+});
+
+test("CARDS.md says which files are source files", () => {
+  const text = read("CARDS.md");
+  const at = text.indexOf("**`source.files`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about source.files");
+  const bullet = text.slice(at, text.indexOf("\n- **", at + 1));
+  assert.match(bullet, /built/);
+  assert.match(bullet, /prompt/);
+  assert.match(bullet.replace(/\s+/g, " "), /starts? (it|a workflow)/);
+  assert.match(bullet, /shared/);
+  assert.match(bullet, /package\.json/);
+});
+
+test("the MCP and Claude Code notes say MCP tools go in tools.mcp only", () => {
+  for (const file of ["ecosystems/mcp.md", "ecosystems/claude-code.md", "ecosystems/claude-agent-sdk.md"]) {
+    const text = read(file);
+    assert.match(text, /`tools\.mcp`[^\n]*(\n[^\n]*){0,3}tool names/, file);
+    assert.match(text, /not (also )?in `tools\.allow`/, file);
+    assert.match(text, /server name/, file);
+  }
+});
+
+test("the example cards keep MCP tools out of tools.allow", () => {
+  const doc = JSON.parse(fs.readFileSync(new URL("../examples/roster.example.json", import.meta.url), "utf8"));
+  for (const c of doc.cards) assert.ok(!c.tools.allow.some((t) => t.startsWith("mcp__")), c.id);
+});
+
+test("no skill file sends the model to spec/ or examples/, which are not installed with the skill", () => {
+  const files = fs.readdirSync(skill, { recursive: true }).filter((f) => f.endsWith(".md"));
+  for (const f of files) {
+    const lines = read(f).split("\n").filter((l) => /`(spec|examples)\/[^`]+\.(md|json)`/.test(l));
+    const allowed = f === path.join("references", "types.md") ? lines.filter((l) => !/^A copy of/.test(l)) : lines;
+    assert.deepEqual(allowed, [], f);
+  }
+});
+
+test("MAP.md id order: a function counts only when it builds and returns the agent", () => {
+  const text = read("MAP.md");
+  assert.match(text, /builds and returns it/);
+  assert.match(text, /only runs the agent/);
+  assert.match(text, /`build_help_desk_crew\(\)` gives\s+`help-desk-crew`/);
+});
+
+test("Agent SDK notes: user settings load by default, so an app agent gets unknowns on skills and context", () => {
+  const text = read("ecosystems/claude-agent-sdk.md").replace(/\s+/g, " ");
+  assert.match(text, /not set,? it loads the user, project and local/);
+  assert.match(text, /together/);
+  assert.match(text, /unknowns? on `skills` and `context`/);
+  assert.match(text, /without `"user"`[^.]*no unknown/);
+});
+
+test("Claude Code notes: a developer's own user settings are a one-line note in map.md, not an unknown per card", () => {
+  const text = read("ecosystems/claude-code.md").replace(/\s+/g, " ");
+  assert.match(text, /user-level settings/);
+  assert.match(text, /not an unknown on each card/);
+  assert.match(text, /Summary/);
+});
+
+test("CARDS.md says purpose is one sentence written from every line that states the job", () => {
+  const text = read("CARDS.md");
+  const at = text.indexOf("**`purpose`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about purpose");
+  const bullet = text.slice(at, text.indexOf("\n- **", at + 1)).replace(/\s+/g, " ");
+  assert.match(bullet, /one sentence/);
+  assert.match(bullet, /description/);
+  assert.match(bullet, /docstring/);
+  assert.match(bullet, /every line/);
+  assert.match(bullet, /`goals`/);
+});
+
+test("CARDS.md: steps and plain_steps are for workflows, starts for any top-level card", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  assert.match(text, /`steps` and `plain_steps` are for workflows only/);
+  assert.match(text, /`starts` goes on any top-level card/);
+});
+
+test("SKILL.md takes the run folder's date and taken_at from one clock reading", () => {
+  assert.match(read("SKILL.md").replace(/\s+/g, " "), /one clock reading/);
+});
+
+test("CARDS.md says memory.scope is none only from a declared setting", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`memory.scope`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about memory.scope");
+  const bullet = text.slice(at, at + 700);
+  assert.match(bullet, /declared setting/);
+  assert.match(bullet, /memory=False/);
+  assert.match(bullet, /no memory code[^.]*`null`/i);
+});
+
+test("CARDS.md says how prompt-stated bans fill guardrails.forbidden", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`guardrails.forbidden`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about guardrails.forbidden");
+  const bullet = text.slice(at, at + 900);
+  assert.match(bullet, /one item per ban/);
+  assert.match(bullet, /lower case/);
+  assert.match(bullet, /"only[^"]*"[^.]*not a ban/i);
+  assert.match(bullet, /never in `stated_only`/);
+});

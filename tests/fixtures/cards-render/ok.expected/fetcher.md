@@ -37,6 +37,7 @@ Finds today's notes using a search tool.
 
 | Field | Value | Where | Quote | From |
 |---|---|---|---|---|
+| name | Fetcher | app/fetcher.py:12 | `fetcher = Agent(` | code |
 | purpose | Finds today's notes using a search tool. | app/fetcher.py:1 | `"""Fetcher: finds today's notes."""` | code |
 | engine.model | claude-sonnet-4-5 | app/fetcher.py:6 | `MODEL = "claude-sonnet-4-5"` | code |
 | runtime | Python, Anthropic SDK | app/fetcher.py:4 | `import anthropic` | code |
@@ -47,4 +48,4 @@ Finds today's notes using a search tool.
 | guardrails.limits.turns | 5 | app/fetcher.py:7 | `MAX_TURNS = 5` | code |
 | org.reports_to | daily-digest | app/digest.py:11 | `notes = fetcher.run()` | code |
 
-Definition: not rated yet · Evidence: 9 items
+Definition: not rated yet · Evidence: 10 items

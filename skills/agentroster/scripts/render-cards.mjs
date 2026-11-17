@@ -36,9 +36,20 @@ const FIELD_LABELS = {
 
 /** Order of card fields in the Sources list (by top-level field). */
 const SOURCE_ORDER = [
-  "purpose", "engine", "runtime", "role", "goals", "instructions", "skills", "tools",
+  "name", "purpose", "engine", "runtime", "role", "goals", "instructions", "skills", "tools",
   "context", "memory", "guardrails", "io", "handoffs", "org",
 ];
+
+/** Plain words for common media types; any other type shows as written. */
+const MEDIA_WORDS = {
+  "text/plain": "text", "application/json": "JSON", "text/markdown": "Markdown", "text/html": "HTML",
+  "text/csv": "CSV", "application/pdf": "PDF",
+  "text/javascript": "JavaScript", "application/javascript": "JavaScript",
+  "text/typescript": "TypeScript", "application/typescript": "TypeScript",
+  "text/x-python": "Python", "application/yaml": "YAML", "text/yaml": "YAML",
+  "application/xml": "XML", "text/xml": "XML", "text/x-shellscript": "shell script",
+};
+const mediaWord = (t) => MEDIA_WORDS[t] ?? (/^(image|audio|video)\//.exec(t)?.[1] ?? t);
 
 const getPath = (obj, p) =>
   p.split(".").reduce((v, k) => (v !== null && typeof v === "object" && Object.hasOwn(v, k) ? v[k] : undefined), obj);
@@ -108,6 +119,9 @@ export function cardView(card, roster, unknowns = []) {
   }
 
   const groups = [runsOn];
+  if (!steps && Array.isArray(ext?.starts) && ext.starts.length) {
+    runsOn.tiles.push(tile("Starts", ext.starts.join(" · "), null, { wide: true }));
+  }
   if (!steps) {
     const allow = card.tools?.allow ?? [];
     const canDo = [
@@ -116,7 +130,8 @@ export function cardView(card, roster, unknowns = []) {
     if (card.skills?.length) canDo.push(tile("Skills", card.skills.map((s) => s.name).join(" · "), "skills", { wide: true }));
     if (card.tools?.mcp?.length) canDo.push(tile("MCP tools", card.tools.mcp.join(" · "), "tools.mcp", { wide: true }));
     if (card.io?.in?.length || card.io?.out?.length) {
-      canDo.push(tile("Takes → returns", `${(card.io.in ?? []).join(", ") || "—"} → ${(card.io.out ?? []).join(", ") || "—"}`, "io", { wide: true }));
+      const words = (list) => (list ?? []).map(mediaWord).join(", ") || "—";
+      canDo.push(tile("Takes → returns", `${words(card.io.in)} → ${words(card.io.out)}`, "io", { wide: true }));
     }
     groups.push({ title: "Can do", tiles: canDo });
   }

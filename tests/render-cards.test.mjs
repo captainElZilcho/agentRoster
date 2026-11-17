@@ -174,3 +174,30 @@ test("when the runtime tile is full width, the model tile is too", () => {
   delete f.roster.cards.find((c) => c.id === "daily-digest").extensions[CARD_VIEW_NS];
   assert.equal(tile(viewOf(f, "daily-digest"), "Model").wide, true);
 });
+
+test("io media types show as friendly words on the card", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.io.in = ["text/plain"];
+  c.io.out = ["application/json", "image/png", "application/x-custom"];
+  assert.equal(tile(viewOf(f, "fetcher"), "Takes → returns").value, "text → JSON, image, application/x-custom");
+});
+
+test("common code and data file types show as plain words too", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.io.in = ["text/plain"];
+  c.io.out = ["text/javascript", "text/x-python", "text/typescript", "application/yaml", "text/x-shellscript"];
+  assert.equal(tile(viewOf(f, "fetcher"), "Takes → returns").value, "text → JavaScript, Python, TypeScript, YAML, shell script");
+});
+
+test("a top-level agent with starts shows a Starts tile in Runs on", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.org.reports_to = null;
+  c.extensions[CARD_VIEW_NS] = { starts: ["command line"], evidence: {} };
+  const v = viewOf(f, "fetcher");
+  assert.equal(tile(v, "Starts").value, "command line");
+  assert.ok(v.groups[0].tiles.some((t) => t.label === "Starts"));
+  assert.match(renderCardMarkdown(v), /- Starts: command line\n/);
+});

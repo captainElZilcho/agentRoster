@@ -30,6 +30,7 @@ Collects the day's notes and sends a short digest.
 
 | Field | Value | Where | Quote | From |
 |---|---|---|---|---|
+| name | Daily Digest | app/digest.py:5 | `def daily_digest():` | code |
 | purpose | Collects the day's notes and sends a short digest. | app/digest.py:1 | `"""Collect notes and send a digest."""` | code |
 | runtime | Python script run by cron | app/digest.py:3 | `# run by cron at 07:00` | code |
 | guardrails.limits.minutes | 10 | app/digest.py:8 | `TIMEOUT_MINUTES = 10` | code |
@@ -39,4 +40,4 @@ Collects the day's notes and sends a short digest.
 | card view: steps | fetcher | app/digest.py:11 | `notes = fetcher.run()` | code |
 | card view: plain_steps | 2 | app/digest.py:12 | `digest = summarise(notes)` | code |
 
-Definition: not rated yet · Evidence: 8 items
+Definition: not rated yet · Evidence: 9 items

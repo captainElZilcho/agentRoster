@@ -52,19 +52,17 @@
     }
   ],
   "tools": {
-    "allow": [
-      "mcp__opshub__fleet",
-      "mcp__opshub__app",
-      "mcp__opshub__ports",
-      "mcp__opshub__events"
-    ],
+    "allow": [],
     "deny": [
       "Bash",
       "Write",
       "Edit"
     ],
     "mcp": [
-      "opshub"
+      "mcp__opshub__fleet",
+      "mcp__opshub__app",
+      "mcp__opshub__ports",
+      "mcp__opshub__events"
     ]
   },
   "context": [
@@ -93,10 +91,10 @@
   },
   "io": {
     "in": [
-      "text"
+      "text/plain"
     ],
     "out": [
-      "text"
+      "text/plain"
     ],
     "report": "state word, reason, since, next step if any"
   },

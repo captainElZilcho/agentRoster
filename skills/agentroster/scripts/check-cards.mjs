@@ -1,12 +1,13 @@
 // Checks a run's cards against its map and coverage: the same ids in all three,
 // evidence for every filled value, evidence keys that name real fields, relative
 // evidence paths, unknown fields left empty, and workflow steps that report to the
-// workflow. Usage: check-cards.mjs <run-dir>
+// workflow; with the project, that every quote is on the line it cites.
+// Usage: check-cards.mjs <run-dir> --project <dir>
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "./lib/cli.mjs";
-import { compareText } from "./lib/order.mjs";
+import { canonicalJson, compareText } from "./lib/order.mjs";
 import { validateRosterFile } from "./validate-card.mjs";
 import { validateCoverage } from "./validate-coverage.mjs";
 import { inventoryIds } from "./check-map.mjs";
@@ -16,7 +17,7 @@ export const CARD_VIEW_NS = "io.github.captainelzilcho.agentroster.card-view/v1"
 
 /** Card fields whose filled values must carry evidence. */
 const EVIDENCED_FIELDS = [
-  "purpose", "role", "goals", "instructions", "context", "skills",
+  "name", "purpose", "role", "goals", "instructions", "context", "skills",
   "tools.allow", "tools.deny", "tools.mcp", "engine.model", "runtime",
   "io.in", "io.out", "io.report",
   "guardrails.permission", "guardrails.forbidden", "guardrails.needs_approval", "guardrails.data",
@@ -71,12 +72,27 @@ function checkCard(card, byId, unknowns, errors) {
   }
   checkEvidenceItems(id, evidence, errors);
 
+  // io holds media types, as A2A's input and output modes do.
+  for (const side of ["in", "out"]) {
+    for (const mode of card.io?.[side] ?? []) {
+      if (!/^[a-z]+\/[a-z0-9.+*-]+$/i.test(mode)) {
+        errors.push(`card "${id}": io.${side} "${mode}" is not a media type like "text/plain"`);
+      }
+    }
+  }
+
   // A single value with an unknown stays empty. A list keeps the items the code shows: its
   // unknown says the list may be incomplete (for example an MCP server's tools in a package).
   for (const u of unknowns.filter((x) => x.card === id)) {
     const value = getPath(card, u.field);
     if (!Array.isArray(value) && isFilled(value)) {
       errors.push(`card "${id}": ${u.field} has an unknown in coverage.json but is filled`);
+    }
+  }
+
+  for (const tool of Array.isArray(card.tools?.allow) ? card.tools.allow : []) {
+    if (typeof tool === "string" && tool.startsWith("mcp__")) {
+      errors.push(`card "${id}": tools.allow has the MCP tool "${tool}"; put it in tools.mcp`);
     }
   }
 
@@ -90,6 +106,20 @@ function checkCard(card, byId, unknowns, errors) {
       }
     }
     checkEvidenceItems(id, extEvidence, errors);
+    if (card.kind === "agent") {
+      for (const field of ["steps", "plain_steps"]) {
+        if (isFilled(ext[field])) errors.push(`card "${id}": extensions.${CARD_VIEW_NS}.${field} is for workflows only`);
+      }
+    }
+    if (isFilled(ext.starts) && card.org?.reports_to) {
+      errors.push(`card "${id}": starts is only for a top-level card; it reports to "${card.org.reports_to}"`);
+    }
+    const sourcePaths = new Set((card.source?.files ?? []).map((f) => f?.path));
+    for (const item of Array.isArray(extEvidence.starts) ? extEvidence.starts : []) {
+      if (typeof item?.file === "string" && !sourcePaths.has(item.file)) {
+        errors.push(`card "${id}": ${item.file} starts it but is not in source.files`);
+      }
+    }
     for (const step of Array.isArray(ext.steps) ? ext.steps : []) {
       if (byId.get(step)?.org?.reports_to !== id) {
         errors.push(`card "${id}": step "${step}" does not report to it`);
@@ -121,6 +151,10 @@ export function checkCards(roster, coverage, mapText) {
   compare(mapIds, "map.md", rosterIds, "roster.json");
   compare(coverageIds, "coverage.json", rosterIds, "roster.json");
 
+  if (canonicalJson(roster.snapshot ?? null) !== canonicalJson(coverage.snapshot ?? null)) {
+    errors.push("roster.json's snapshot differs from coverage.json's: copy it from coverage.json");
+  }
+
   const unknowns = coverage.unknowns ?? [];
   for (const card of cards) checkCard(card, byId, unknowns, errors);
 
@@ -128,9 +162,68 @@ export function checkCards(roster, coverage, mapText) {
   return { valid: sorted.length === 0, errors: sorted };
 }
 
+const squash = (s) => String(s).replace(/\s+/g, " ").trim();
+
+/** Is the quote on the line? Spaces are collapsed, a quote may be part of the line, and a
+ * quote with [redacted] must match the pieces around it, in order. */
+function quoteOnLine(quote, line) {
+  const text = squash(line);
+  let at = 0;
+  for (const piece of squash(quote).split("[redacted]").map((s) => s.trim()).filter(Boolean)) {
+    const found = text.indexOf(piece, at);
+    if (found < 0) return false;
+    at = found + piece.length;
+  }
+  return true;
+}
+
+/**
+ * Check that each evidence quote is on the line it cites in the project: card evidence, the
+ * card-view extension's evidence and the coverage unknowns' evidence.
+ * @param {object} roster A valid roster file.
+ * @param {object} coverage A valid coverage document.
+ * @param {(file: string) => string|null} readFile Reads a project file by its relative path; null if missing.
+ * @returns {{valid: boolean, errors: string[]}}
+ */
+export function checkQuotes(roster, coverage, readFile) {
+  const errors = [];
+  const files = new Map();
+  const linesOf = (file) => {
+    if (!files.has(file)) {
+      const text = readFile(file);
+      files.set(file, text === null ? null : text.replace(/^\uFEFF/, "").split(/\r?\n/));
+    }
+    return files.get(file);
+  };
+  const check = (where, item) => {
+    if (!goodPath(item?.file)) return; // reported by the path check; never read
+    const lines = linesOf(item.file);
+    if (lines === null) return errors.push(`${where}: ${item.file} is not in the project`);
+    if (item.line === null || item.line === undefined) return;
+    if (item.line > lines.length) return errors.push(`${where}: ${item.file}:${item.line} is past the end of the file`);
+    if (!quoteOnLine(item.quote ?? "", lines[item.line - 1])) {
+      errors.push(`${where}: ${item.file}:${item.line} does not contain "${item.quote}"`);
+    }
+  };
+  for (const card of roster.cards ?? []) {
+    for (const [key, items] of Object.entries(card.evidence ?? {})) {
+      for (const item of Array.isArray(items) ? items : []) check(`card "${card.id}": ${key} evidence`, item);
+    }
+    const ext = card.extensions?.[CARD_VIEW_NS]?.evidence ?? {};
+    for (const [key, items] of Object.entries(ext)) {
+      for (const item of Array.isArray(items) ? items : []) check(`card "${card.id}": card view ${key} evidence`, item);
+    }
+  }
+  for (const u of coverage.unknowns ?? []) {
+    for (const item of u.evidence ?? []) check(`unknown "${u.card}" ${u.field}: evidence`, item);
+  }
+  const sorted = [...new Set(errors)].sort(compareText);
+  return { valid: sorted.length === 0, errors: sorted };
+}
+
 // Command line
 
-const USAGE = "usage: check-cards.mjs <run-dir>";
+const USAGE = "usage: check-cards.mjs <run-dir> --project <dir>";
 class CliError extends Error {}
 
 const reason = (err) => {
@@ -163,14 +256,29 @@ function readJson(file) {
 /** @returns {number} Exit code: 0 ok, 1 problems, 2 a file can't be used. */
 export function runCheckCardsCli(args) {
   try {
-    if (args.length !== 1) throw new CliError(USAGE);
-    const dir = args[0];
+    if (args.length !== 3 || args[1] !== "--project") throw new CliError(USAGE);
+    const [dir, , project] = args;
+    let isDir = false;
+    try {
+      isDir = statSync(project).isDirectory();
+    } catch (err) {
+      throw new CliError(`cannot read project folder ${project} (${reason(err)})`);
+    }
+    if (!isDir) throw new CliError(`cannot read project folder ${project} (not a folder)`);
     const roster = readJson(path.join(dir, "roster.json"));
     const coverage = readJson(path.join(dir, "coverage.json"));
     const mapText = readText(path.join(dir, "map.md"));
     if (!validateRosterFile(roster).valid) throw new CliError("invalid roster.json: run validate-card.mjs for details");
     if (!validateCoverage(coverage).valid) throw new CliError("invalid coverage.json: run validate-coverage.mjs for details");
-    const result = checkCards(roster, coverage, mapText);
+    const readFile = (file) => {
+      try {
+        return readFileSync(path.join(project, file), "utf8");
+      } catch {
+        return null;
+      }
+    };
+    const errors = [...checkCards(roster, coverage, mapText).errors, ...checkQuotes(roster, coverage, readFile).errors];
+    const result = { valid: errors.length === 0, errors: [...new Set(errors)].sort(compareText) };
     if (result.valid) {
       console.log(`ok ${dir}`);
       return 0;

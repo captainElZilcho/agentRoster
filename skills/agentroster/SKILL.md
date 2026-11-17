@@ -55,7 +55,7 @@ node <skill>/scripts/validate-coverage.mjs <run>/coverage.json
 node <skill>/scripts/check-map.mjs <run>
 node <skill>/scripts/redact-check.mjs <run> --project <project>
 node <skill>/scripts/validate-card.mjs <run>/roster.json
-node <skill>/scripts/check-cards.mjs <run>
+node <skill>/scripts/check-cards.mjs <run> --project <project>
 node <skill>/scripts/render-cards.mjs <run>
 ```
 
@@ -72,7 +72,9 @@ found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `r
    folder. Paths in the output are always from the project root.
 3. **Output folder.** `.agentroster/` at the project root, unless the user names another one.
    The run folder inside it is `run-YYYY-MM-DD-N` (today's date in UTC; `N` counts up from 1
-   within a day, so take the next free number).
+   within a day, so take the next free number). Take the date and the snapshot's `taken_at` from
+   one clock reading (`date -u +%Y-%m-%dT%H:%M:%SZ`), so they agree; `check-map.mjs` reports a
+   run id whose date differs from `taken_at`.
 4. **Git-ignore check.** In a git repository, when the output folder is inside the project, run
    exactly `git -c core.fsmonitor=false -c core.hooksPath=/dev/null check-ignore --no-index -q <run>/map.md`
    from the output folder's parent folder (the two settings stop git from running a command the

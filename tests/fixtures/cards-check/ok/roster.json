@@ -115,6 +115,14 @@
             "quote": "TIMEOUT_MINUTES = 10",
             "found_by": "agent"
           }
+        ],
+        "name": [
+          {
+            "file": "app/digest.py",
+            "line": 5,
+            "quote": "def daily_digest():",
+            "found_by": "agent"
+          }
         ]
       },
       "provenance": {
@@ -339,6 +347,14 @@
             "file": "app/fetcher.py",
             "line": 2,
             "quote": "# goal: every note written today",
+            "found_by": "agent"
+          }
+        ],
+        "name": [
+          {
+            "file": "app/fetcher.py",
+            "line": 12,
+            "quote": "fetcher = Agent(",
             "found_by": "agent"
           }
         ]

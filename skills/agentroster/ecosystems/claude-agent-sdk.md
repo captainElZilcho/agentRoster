@@ -28,7 +28,9 @@ uses snake_case, TypeScript camelCase):
   names such as `Read`, `Bash`, `mcp__<server>__<tool>`), plus `mcp_servers` / `mcpServers`
   (including in-process servers made with `create_sdk_mcp_server` and functions marked `@tool`).
   Record `allowedTools` under `tools.allow` (the tools it is set up with) and `disallowedTools`
-  under `tools.deny`, never in permission. `allowedTools` only approves the listed tools without
+  under `tools.deny`, never in permission. The `mcp__…` names in `allowedTools` go to `tools.mcp`
+  as tool names, not in `tools.allow`; a server name goes there only when the agent may use the
+  whole server (`ecosystems/mcp.md`). `allowedTools` only approves the listed tools without
   asking; tools not on it still go through `permissionMode` and `canUseTool`, so it is not a
   limit by itself. `disallowedTools` blocks.
 - **Model:** `model`. If it is not set, the docs name no SDK default (the CLI's default depends
@@ -45,8 +47,10 @@ uses snake_case, TypeScript camelCase):
   `description`, `prompt`, `tools` and `model`.
 - **Files from disk:** `setting_sources` / `settingSources` (`"user"`, `"project"`, `"local"`)
   loads `.claude/` settings, `CLAUDE.md`, subagent files and skills from disk. When it is not
-  set, it takes the CLI defaults (all sources). Note which sources apply; `"user"` points
-  outside the repo.
+  set, it loads the user, project and local sources, as the Claude Code CLI does. They load
+  together, not one instead of another: skills from `~/.claude/skills/` and the repo's
+  `.claude/skills/` are both available, both `CLAUDE.md` files are read, and settings merge
+  (local over project over user). `[]` loads none.
 
 ## Agent or workflow
 
@@ -63,8 +67,12 @@ uses snake_case, TypeScript camelCase):
   `.claude/agents/*.md` and skills are part of this agent. Only an explicit list without
   `"project"` leaves them out; then those files are not this agent's, though they may still be
   Claude Code's own (see `claude-code.md`).
-- **`"user"` settings** live outside the repo: record what they would add as an unknown
-  (`outside-repo`).
+- **`"user"` settings come from the machine the app runs on** (`~/.claude/` there), outside the
+  repo, and they change how the agent runs. When `settingSources` is not set, or lists `"user"`,
+  record unknowns on `skills` and `context` (reason `outside-repo`, detail such as "settingSources
+  is not set, so the skills and CLAUDE.md in ~/.claude on the machine it runs on also load"),
+  with the options line as evidence. Keep the skills and `CLAUDE.md` the repo does give on the
+  card. A list without `"user"` (or `[]`) leaves them out: no unknown.
 - **The `prompt` passed to `query`** is the task, often built from user input. The system prompt
   is the instructions.
 - **The same options object** reused by several `query` calls with the same job is one agent.

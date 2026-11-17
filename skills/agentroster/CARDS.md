@@ -3,8 +3,9 @@
 This file is the method for the cards phase. Read `SKILL.md` first; it says when to come here.
 The map is done: `map.md` and `coverage.json` are in the run folder and passed their checks.
 
-You write `roster.json`, a roster file (format 0.1, `spec/roster-file-v0.1.md`) that holds one
-standard v0.2 card per agent and workflow (`spec/roster-card-standard-v0.2.md`). Then the scripts
+You write `roster.json`, a roster file (format 0.1, `schema/roster-file-0.1.schema.json` in this
+skill folder) that holds one standard v0.2 card per agent and workflow
+(`schema/roster-card-0.2.schema.json`). Then the scripts
 check the cards and draw them as Markdown and as an HTML page.
 
 ## 1. What goes in
@@ -29,10 +30,42 @@ check the cards and draw them as Markdown and as an HTML page.
   `[redacted]`. `found_by` is `script`, `agent` or `hand`.
 - **`kind` and `type` are never null.** `kind` follows the identity rule in `MAP.md` (an agent
   lets the model choose its next step or tool; a workflow runs model calls along fixed paths).
-  `type` is a judgement: choose it by the job, not by the name the agent gives itself, and quote
+  `type` is a judgement: read the nine types in `references/types.md` (in this skill folder) and
+  choose by the job, not by the name the agent gives itself, and quote
   the line that decided it under `evidence.type`. When two types fit, pick by the job and note the
   other in `map.md` under that agent.
 - **Ids** come from the map; the order for choosing them is in `MAP.md`.
+- **`name`** is the agent's name as the code or its prompt gives it (or the id in words), with
+  evidence like any value: the line it came from (a `name` field, the variable, the prompt's role).
+- **`purpose` (the card's sub-line)** is one sentence on what it is for, starting with a verb
+  ("Finds new items worth reading…"). Write it from every line that states the agent's job: a
+  declared description (frontmatter `description:`, a `description=` argument, an A2A card), a
+  docstring or header comment, a role card, the prompt's role sentence or goal. A declared
+  description leads; the others may add to it. Evidence lists every line you drew on. A goal
+  copied word for word is not a purpose: it goes in `goals`. When nothing states the job, write
+  it from what the code does and cite those lines.
+- **`role` (the card's job)** is a few plain lines on what it does and doesn't do; fill it on
+  every card. For an agent: what it takes in, what it does (and whether the model picks its own
+  tools or steps), what it hands on, and one thing it does not do. For a workflow: its steps in
+  order, which steps are plain code, and any checks or loops between steps (a gate and its
+  threshold, a retry, a revise loop and its limit). Evidence is the lines that show it: the loop,
+  the graph edges, the calls.
+- **`io.in` and `io.out` (what it takes and returns)** hold media types, as A2A agent cards do:
+  `text/plain`, `application/json`, `text/markdown`, `image/png` and so on. `io.in` is what the
+  model is given: a user or task message is `text/plain`; images, files or structured data take
+  their own type. A schedule or an HTTP trigger alone is not input (it goes with the runtime).
+  `io.out` is how the reply is used: parsed as JSON, or a prompt that says "Return JSON", is
+  `application/json`; files the agent writes take the files' type (`text/x-python`,
+  `text/markdown`); plain prose is `text/plain`. Evidence is the line that builds the message and
+  the line that parses or uses the reply. `io.report` is filled only from a stated output line.
+- **`source.files` (where it is defined)** lists, in this order: the line where it is built (the
+  constructor, the `StateGraph(...)` or `Agent(...)` call, not a later `compile`); its own prompt
+  or definition file, as a whole file (`line: null`); and for a top-level card, each file that
+  starts it (an entry point, an HTTP endpoint, a schedule, or a command in a package file such as
+  a `package.json` script or a `pyproject.toml` `[project.scripts]` line), at the line that
+  starts it. Every file in the card-view extension's `starts` evidence is in `source.files` (the check
+  enforces it). Leave out shared files several agents use (a shared skill file, a common helper,
+  config); they belong to their own field (`skills`, `context`) with evidence there.
 - **What you could not see stays empty.** A field whose value lives outside the code (a prompt in a
   database, a model left to an SDK's default) is `null` on the card and has an unknown in
   `coverage.json` (`card`, `field`, `reason`, `detail`, `evidence`). Cite the line where the value
@@ -41,9 +74,20 @@ check the cards and draw them as Markdown and as an HTML page.
 - **A stated limit is not a limit.** A limit written in a prompt ("keep it under 5 steps") but not
   enforced by code is never put in `guardrails.limits`. Record where it is stated in the role or
   details, and list the field it would fill under the card-view extension's `stated_only` (below).
+- **`guardrails.forbidden` holds what it is told never to do:** each action the prompt, a role
+  card or config bans ("never", "do not", "must not"), one item per ban, written as the bare
+  action in lower case without the "never" ("Never edit files." gives `"edit files"`). Evidence
+  is the line that states it. An "only do X" instruction is not a ban; it goes in `role` or
+  `goals`. Bans are forbidden actions, not limits, so `guardrails.forbidden` is never in
+  `stated_only`. When the code also blocks the action (a tool left off the list), keep the
+  prompt line as evidence; the tools show on the card.
 - **Permission comes only from a declared setting:** a permission mode (Claude Code's
   `permissionMode`, the Agent SDK's `permission_mode`) or a hand card's value. A list of tools is
   `tools.allow` / `tools.deny`, never permission.
+- **`memory.scope` is `"none"` only from a declared setting** that turns memory off (CrewAI's
+  `memory=False`, a stateless option, a hand card's `"scope": "none"`), with that line as
+  evidence. When the project has no memory code at all, the scope stays `null`: the card says it
+  is not known, since nothing in the code says so.
 - **The general rules in `MAP.md` section 4 apply to every card**, for example: saving output is
   not memory; a trigger is not input; a handoff is recorded only where one carded step passes work
   straight to another; a run-wide budget belongs to the workflow and a limit inside one agent's
@@ -73,7 +117,7 @@ A developer may keep `<id>.roster.json` beside an agent.
 ## 4. The card-view extension
 
 Some things the card shows have no core field: the short runtime name, the language, what starts
-a workflow, its steps in flow order, how many of its steps are plain code, and which limits are
+a top-level agent or workflow, its steps in flow order, how many of its steps are plain code, and which limits are
 only stated. They go in one extension on the card, named exactly:
 
 ```
@@ -98,7 +142,12 @@ io.github.captainelzilcho.agentroster.card-view/v1
 ```
 
 - Fill only what the code shows; leave a key out (or `[]`) otherwise.
+- `steps` and `plain_steps` are for workflows only: they are its fixed order. An agent chooses
+  its own path; what it may do is already on the card (`tools`, `skills`, `handoffs`).
 - `steps` lists the ids of the cards that report to this workflow, in the order the code runs them.
+- `starts` goes on any top-level card, agent or workflow (one that reports to no other card): what
+  starts it from outside, such as a schedule, a command, an HTTP endpoint or a chat. A card that
+  reports to another is started by it, so it has no `starts`.
 - `stated_only` lists card field paths (such as `"guardrails.limits.turns"`) whose value is only
   stated in a prompt.
 - Evidence for these values goes in the extension's own `evidence` map, one key per field, same
@@ -110,7 +159,7 @@ Run these from the skill folder, in this order, after writing `roster.json`:
 
 ```
 node <skill>/scripts/validate-card.mjs <run>/roster.json
-node <skill>/scripts/check-cards.mjs <run>
+node <skill>/scripts/check-cards.mjs <run> --project <project>
 ```
 
 Then follow `VALIDATION.md` (the validator checks each card against the code), then:
@@ -122,6 +171,8 @@ node <skill>/scripts/render-cards.mjs <run>
 
 `check-cards.mjs` checks that the cards, the map and the coverage name the same agents; that every
 filled value has evidence; that every evidence key is a real field; that evidence paths are
-relative with forward slashes; that a field with an unknown is empty; and that a workflow's
-`steps` report to it. A failed check is fixed and run again; a run never ends with a known leak or
+relative with forward slashes; that a field with an unknown is empty; that a workflow's
+`steps` report to it; and, in the project, that each quote is on the line it cites (spaces
+collapsed, part of a line is fine). A wrong line is fixed by reading the file again, never by
+changing the quote to fit. A failed check is fixed and run again; a run never ends with a known leak or
 an invalid file. `render-cards.mjs` writes `cards/<id>.md` and `cards.html` in the run folder.

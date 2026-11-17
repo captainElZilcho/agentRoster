@@ -79,10 +79,12 @@ these that exists:
 
 1. a hand card's `id`;
 2. a `name` field the code or file gives (`name="triage"`, frontmatter `name: triage`);
-3. the variable, function or class name the code binds the agent to (`triage = Agent(…)` gives
-   `triage`);
-4. the file name, without its extension;
-5. only then, the role text in the prompt.
+3. the variable or class that holds the agent (`triage = Agent(…)` gives `triage`), or a function
+   that builds and returns it, without its verb (`build_help_desk_crew()` gives
+   `help-desk-crew`). A function that only runs the agent (`run`, `main`, `askHelper`) does not
+   count;
+4. the role the prompt gives the agent (`You are a notes assistant` gives `notes-assistant`);
+5. only then, the file name, without its extension.
 
 Each id is used once. If the previous run has the same agent, reuse its id. The cards phase keeps
 these ids.

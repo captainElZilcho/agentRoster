@@ -140,3 +140,12 @@ test("CLI prints problems on stdout, not stderr", () => {
   assert.match(r.stdout, /section "Flow" is out of order/);
   assert.equal(r.stderr, "");
 });
+
+test("the run id's date must be taken_at's date in UTC", () => {
+  const f = fixture("ok");
+  f.coverage.snapshot.id = "run-2026-11-04-1";
+  assert.ok(checkMap(f.map, f.coverage).errors.includes(
+    'run id "run-2026-11-04-1" is dated 2026-11-04 but taken_at is 2026-11-05 (UTC): take both from one clock reading'));
+  f.coverage.snapshot.id = "run-2026-11-05-3";
+  assert.ok(!checkMap(f.map, f.coverage).errors.some((e) => e.includes("taken_at")));
+});

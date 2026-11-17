@@ -49,8 +49,7 @@
   ],
   "tools": {
     "allow": [
-      "Read",
-      "mcp__opshub__fleet"
+      "Read"
     ],
     "deny": [
       "Bash",
@@ -58,7 +57,7 @@
       "Edit"
     ],
     "mcp": [
-      "opshub"
+      "mcp__opshub__fleet"
     ]
   },
   "context": [
@@ -86,10 +85,10 @@
   },
   "io": {
     "in": [
-      "json"
+      "application/json"
     ],
     "out": [
-      "json"
+      "application/json"
     ],
     "report": "{decision: approve|block|ask_user, rule, reason}"
   },
