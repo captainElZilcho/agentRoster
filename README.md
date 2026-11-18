@@ -1,158 +1,199 @@
 # AgentRoster
 
-**Status:** standard v0.2, findings format v0.1 and coverage format v0.2 (drafts), their validators, and the map and cards phases of the skill. The assess and report phases are not built yet · **Licence:** Apache-2.0
+**Find every AI agent in your project, and get a card for each one.**
 
-AgentRoster is a tool you add to a project. It reads the code, maps every agent and every
-workflow that calls a model, writes a standard **roster card** for each, and (planned)
-**assesses** how well each one is defined to do its job. Today the map and the cards are built;
-assess and report are not.
+AgentRoster is a skill your coding agent runs on your project. It reads the code (it never runs
+it), finds every agent and every workflow that calls a model, in any language, and writes a
+standard **roster card** for each: what it is for, which model and tools it uses, its guardrails,
+what starts it, and where each fact came from, down to the file and line. You get the cards as
+Markdown files and as one page to open in your browser.
 
-Think of it as an inventory plus a configuration review, like auditing firewalls: what agents
-are there, what each one is set up to do, and whether that is enough, including what should be
-there but isn't. Each agent gets two parts: its **definition** (the card: what it is and what it
-can do) and its **result** (how well that definition holds up, check by check).
+It answers a question most teams can't: **what agents do we actually have, what can each one do,
+and are they agents at all, or workflows that call a model?**
 
-It is meant to answer a question most teams can't: **do you actually have agents, or workflows
-that call a model?**
+**Status:** early. The map and the cards work today. Checking how well each agent is defined
+(assess) and the full report are planned, not built. The card standard and file formats are
+drafts. · **Licence:** Apache-2.0
 
-## Why
+## Quick start
 
-Projects use agents from many places: their own code calling the Anthropic or OpenAI SDKs,
-LangGraph or CrewAI services, Claude Code subagents and skills, MCP servers. Each is defined
-differently, often only in code, so nobody can answer "what agents do I have, what can each one
-do, and is each one defined well enough to do its job?" in one place.
+You need:
+
+- a coding agent that can use Agent Skills, such as Claude Code;
+- Node.js 20 or later (for the small checking scripts; they have no dependencies).
+
+**1. Add the skill to your project.**
+
+```
+npx skills add captainElZilcho/agentRoster
+```
+
+Or copy the [`skills/agentroster/`](skills/agentroster/) folder into your agent's skills folder
+(for Claude Code: `.claude/skills/agentroster/` in your project, or `~/.claude/skills/agentroster/`
+for all your projects). The folder has everything the skill needs.
+
+**2. Keep its output out of git.** Add this line to your `.gitignore`:
+
+```
+.agentroster/
+```
+
+The skill checks this and stops if the folder isn't ignored.
+
+**3. Ask your agent:**
+
+> Map the agents in this project and make the cards.
+
+**4. Open the cards.** The run ends by telling you where they are:
+`.agentroster/run-YYYY-MM-DD-N/cards.html`.
+
+## What you get
+
+Each run writes a folder `.agentroster/run-YYYY-MM-DD-N/`:
+
+| File | What it is |
+|---|---|
+| `cards.html` | One offline page with a card per agent and workflow: what it does, what it runs on, what it can do, its guardrails, what the scan could not see, and the sources |
+| `cards/<id>.md` | The same cards, one Markdown file each |
+| `map.md` | The inventory: every agent and workflow, how they connect, and what was checked and found not to be an agent |
+| `roster.json` | All the cards as data, in the [roster card standard](spec/roster-card-standard-v0.2.md) |
+| `coverage.json` | Every place the scan looked, and everything it could not see |
+
+Nothing on a card is guessed. A value the code doesn't show stays empty. A value that lives
+outside the code (a prompt in a database, a model left to an SDK's default) is shown as
+"couldn't see", never as missing or fine.
+
+## What it does and doesn't do to your project
+
+- **It never runs your code**, never installs anything, and never changes your files.
+- **It never opens secret files** (`.env`, keys, credentials), and it is told to cite a secret
+  by file and line only, writing `[redacted]` in its place. Before it finishes, a script checks
+  the output for anything that looks like a secret or matches a value from your `.env`.
+- **It may ask you questions.** Some things are a judgement call, mainly an agent's type (is it
+  an assistant or a researcher?). When the skill isn't sure, it shows its pick and the runner-up
+  and asks you. If you agree, it saves your answers in **`agentroster.json`** at the project root,
+  so later runs use them and never ask again. That is the only file it ever writes in your
+  project, and only after you say yes. You can edit it by hand or commit it so your team gets the
+  same cards ([format](spec/answers-file-v0.1.md)).
+- When it runs without a person (in CI, for example), it never asks and never writes: unsure
+  picks are marked "to confirm" on the card.
+
+## What it finds
+
+Agents and model workflows in any language. It knows these well, with notes for each: the
+Anthropic, OpenAI and Claude Agent SDKs, LangChain and LangGraph, CrewAI, Claude Code subagents
+and skills, and MCP servers, in Python and TypeScript or JavaScript. Other code that calls a model
+is found too, from the code itself.
+
+It tells **agents** (the model chooses its next step or tool) apart from **workflows** (model
+calls along fixed paths), and gives each card one of nine standard types: orchestrator,
+assistant, researcher, builder, specialist, reviewer, gatekeeper, operator or monitor.
 
 ## How it works
-
-The **map** and **cards** phases are built. The assess and report phases are the planned design
-and are not built yet; a run stops after the cards and says so.
-
-AgentRoster is a skill your own coding agent runs with your model (`npx skills add`). Small
-scripts with no dependencies do everything that needs no model.
 
 ```
 project ─► MAP ─► map.md ─► CARDS ─► roster.json ─► ASSESS ─► findings.json ─► REPORT
                              cards/*.md · cards.html                        assessment.md · assessment.html
 ```
 
-1. **Map** (built): finds every agent and workflow that calls a model, in any language,
-   read-only, and writes `map.md` and `coverage.json`.
-2. **Cards** (built): writes one roster card each into `roster.json`, with file-and-line
-   evidence for every value; nothing invented; secrets checked for. Then draws each card as
-   Markdown (`cards/<id>.md`) and as one offline page (`cards.html`): a header with what the agent
-   does, its specs (what it runs on, what it can do, its guardrails), what the card could not see,
-   and the details and sources folded away.
-3. **Assess** (not built): will check packs for completeness, depth, fit and least agency. Each card will get
-   a 1–5 definition score with a confidence; each finding will say what, why, impact and the fix.
-   What the scan couldn't see is marked unknown, never reported as missing or fine.
-4. **Report** (not built): will write one offline HTML report for people, in a git-ignored
-   folder: the cards at the top, a workflow view, then the findings and recommendations.
+1. **Map** (built): a script searches for the usual signs of model use, then your agent reads
+   the code to find what text search can't see (wrappers, plain HTTP calls, prompt files).
+2. **Cards** (built): one card per agent and workflow, with evidence for every value, then the
+   Markdown cards and the cards page.
+3. **Assess** (planned): check packs for completeness, depth, fit and least agency; a 1–5
+   definition score per card, and findings that each say what, why, impact and the fix.
+4. **Report** (planned): one offline report with the cards, a workflow view and the findings.
 
-Everything a model writes is checked by a fresh validator before it counts (for now, the map and cards phases are checked this way).
-
-### Run it
-
-Ask your coding agent to use the `agentroster` skill, for example: "Map the agents in this
-project." It follows [`skills/agentroster/SKILL.md`](skills/agentroster/SKILL.md): it sets up a run
-folder (`.agentroster/run-YYYY-MM-DD-N/`, which must be git-ignored), runs the search script,
-reads the candidates, writes `detect.json`, `map.md` and `coverage.json`, then writes the cards
-(`roster.json`, `cards/<id>.md`, and `cards.html` to open in a browser). It never runs your
-project and never edits your files; the one file it may write there is `agentroster.json`, your
-answers to its questions, and only after you say yes. It never opens secret files, and it checks its own output
-for secrets before it finishes, using the scripts below. Then it tells you what it found and
-what it could not see.
-
-### Map and card scripts
-
-```
-node skills/agentroster/scripts/detect.mjs tests/fixtures/detect/anthropic-sdk
-node skills/agentroster/scripts/check-map.mjs tests/fixtures/map/ok
-node skills/agentroster/scripts/redact-check.mjs tests/fixtures/map/ok
-node skills/agentroster/scripts/check-cards.mjs tests/fixtures/cards-check/ok --project tests/fixtures/cards-check/ok-project
-node skills/agentroster/scripts/validate-answers.mjs tests/fixtures/answers/valid/typical.json
-```
-
-The paths above are this repo's own test fixtures. `detect.mjs` prints to the screen; add
-`--out <file>` to write a file (the skill writes into the run folder).
-
-- `detect.mjs <project-dir> [--out <file>] [--exclude <dir>]...` looks for the common signs of
-  model use without running anything. Exit codes: `0` it ran, `2` the folder can't be read.
-- `check-map.mjs <run-dir>` checks `map.md` against `coverage.json`. Exit codes: `0` ok, `1`
-  problems (listed), `2` a file can't be read.
-- `redact-check.mjs <run-dir> [--project <dir>]` fails a run whose output holds secret-shaped
-  text, a value from the project's `.env`, MCP or settings files, or a link. It prints where,
-  never the value. Exit codes: `0` clean, `1` a leak, `2` a file can't be read.
-- `check-cards.mjs <run-dir> --project <dir>` checks `roster.json` against `map.md` and
-  `coverage.json`: the same agents in all three, evidence for every filled value, real field
-  names, relative paths, each quote on its line, and stored answers applied (stale ones are
-  printed as `note:` lines). Exit codes: `0` ok, `1` problems (listed), `2` a file can't be read.
-- `validate-answers.mjs <agentroster.json>` checks an answers file. Exit codes: `0` ok, `1`
-  problems (listed), `2` a file can't be read.
-- `render-cards.mjs <run-dir>` writes `cards/<id>.md` and `cards.html` into the run folder (it
-  writes files, so run it on a run folder, not on these fixtures). Exit codes: `0` written, `2`
-  input missing or invalid.
+Everything a model writes is checked by a fresh validator before it counts, and scripts check
+the files themselves. Your own agent and model do the reading; nothing is sent anywhere else.
 
 ## The roster card standard
 
-A portable, extensible description of any agent: type, purpose, role, goals, instructions,
-skills, tools, context, memory, guardrails, handoffs, ratings and usage stats, displayed like a
-collection of sports cards. It reuses A2A Agent Cards, Agent Skills, MCP and Claude Code
-subagent fields where they exist and adds what they lack.
+A portable description of any agent: type, purpose, role, goals, instructions, skills, tools,
+context, memory, guardrails, handoffs, ratings and usage stats, shown like a collection of
+sports cards. It reuses A2A Agent Cards, Agent Skills, MCP and Claude Code subagent fields where
+they exist and adds what they lack. You can also write a card by hand (`<id>.roster.json` next to
+an agent): the skill uses your values over what it finds.
 
-Draft: [`spec/roster-card-standard-v0.2.md`](spec/roster-card-standard-v0.2.md). The earlier
-[v0.1 draft](spec/roster-card-standard-v0.1.md) is kept.
-JSON Schema: [`schema/roster-card-0.2.schema.json`](schema/roster-card-0.2.schema.json) ·
-Examples: [`examples/`](examples/)
+- Standard (draft): [`spec/roster-card-standard-v0.2.md`](spec/roster-card-standard-v0.2.md)
+  (the [v0.1 draft](spec/roster-card-standard-v0.1.md) is kept)
+- JSON Schema: [`schema/roster-card-0.2.schema.json`](schema/roster-card-0.2.schema.json)
+- Examples: [`examples/`](examples/)
 
-AgentRoster is not affiliated with the A2A protocol; A2A's "Agent Card" is a different document,
-and roster cards can be mapped to it.
+AgentRoster is not affiliated with the A2A protocol. A2A's "Agent Card" is a different document;
+roster cards can be mapped to it.
 
-## Check a card or a run file
+## Scripts
 
-Check a roster card, a `roster.json` (every card of a run), a `findings.json` or a `coverage.json`
-against its rules. Needs Node 20 or
-later and no install:
+The skill runs these for you. You can also run them yourself, for example in CI. They need
+Node.js 20 or later and nothing else. Paths are relative to the skill folder.
+
+| Script | What it does |
+|---|---|
+| `validate-card.mjs <file>...` | Checks a roster card or a `roster.json` against the standard |
+| `validate-coverage.mjs <file>...` | Checks a `coverage.json` |
+| `validate-findings.mjs <file>...` | Checks a `findings.json` |
+| `validate-answers.mjs <file>...` | Checks an `agentroster.json` answers file |
+| `detect.mjs <project> [--out <file>] [--exclude <dir>]...` | Searches a project for signs of model use, without running anything |
+| `check-map.mjs <run>` | Checks `map.md` against `coverage.json` |
+| `check-cards.mjs <run> --project <project>` | Checks the cards against the map and the code: the same agents everywhere, evidence for every value, each quote on its line, stored answers applied (stale ones printed as `note:` lines) |
+| `redact-check.mjs <run> [--project <project>]` | Fails a run whose output holds anything secret-shaped or a value from the project's `.env`, MCP or settings files; prints where, never the value |
+| `render-cards.mjs <run>` | Writes `cards/<id>.md` and `cards.html` into the run folder |
+| `match-golden.mjs [--only coverage] <expected> <run>` | Compares a run with a reviewed answer key, one line per difference |
+
+Exit codes: `0` ok, `1` problems found (listed), `2` a file or folder can't be used.
+`detect.mjs` and `render-cards.mjs` exit `0` or `2`.
+
+Try them on this repo's test fixtures:
 
 ```
-node skills/agentroster/scripts/validate-card.mjs my-agent.roster.json
-node skills/agentroster/scripts/validate-card.mjs roster.json
-node skills/agentroster/scripts/validate-findings.mjs findings.json
-node skills/agentroster/scripts/validate-coverage.mjs coverage.json
-node skills/agentroster/scripts/match-golden.mjs expected/ run/
-node skills/agentroster/scripts/match-golden.mjs --only coverage expected/ run/
+node skills/agentroster/scripts/validate-card.mjs examples/fleet-scout.roster.json
+node skills/agentroster/scripts/detect.mjs tests/fixtures/detect/anthropic-sdk
+node skills/agentroster/scripts/check-cards.mjs tests/fixtures/cards-check/ok --project tests/fixtures/cards-check/ok-project
 ```
 
-The formats are in [`spec/findings-and-coverage-v0.1.md`](spec/findings-and-coverage-v0.1.md),
-[`spec/coverage-v0.2.md`](spec/coverage-v0.2.md) (the coverage format the map writes; the validator
-reads 0.1 and 0.2) and [`spec/roster-file-v0.1.md`](spec/roster-file-v0.1.md). The answers file, `agentroster.json`
-(the user's answers to the skill's questions), is in [`spec/answers-file-v0.1.md`](spec/answers-file-v0.1.md).
-Exit codes for the validators (`validate-card`, `validate-findings`, `validate-coverage`): `0` all files are valid, `1` any file is invalid, `2` a file can't be read
-or isn't JSON.
+## File formats
 
-`match-golden.mjs` compares a run folder with a reviewed answer key (`roster.json`, `coverage.json`
-and an optional `expect.json` with `forbidden_strings` and `notes`). It prints one line per
-difference. With `--only coverage` it compares only `coverage.json` (the map phase). Exit codes:
-`0` the run matches, `1` it differs, `2` a file is missing or invalid.
+| File | Spec | Schema |
+|---|---|---|
+| A roster card | [roster card standard v0.2](spec/roster-card-standard-v0.2.md) | [`roster-card-0.2`](schema/roster-card-0.2.schema.json) |
+| `roster.json` (every card of a run) | [roster file v0.1](spec/roster-file-v0.1.md) | [`roster-file-0.1`](schema/roster-file-0.1.schema.json) |
+| `coverage.json` | [coverage v0.2](spec/coverage-v0.2.md) (the validator also reads [0.1](spec/findings-and-coverage-v0.1.md)) | [`coverage-0.2`](schema/coverage-0.2.schema.json) |
+| `findings.json` (planned assess phase) | [findings v0.1](spec/findings-and-coverage-v0.1.md) | [`findings-0.1`](schema/findings-0.1.schema.json) |
+| `agentroster.json` (your answers) | [answers file v0.1](spec/answers-file-v0.1.md) | [`answers-file-0.1`](schema/answers-file-0.1.schema.json) |
 
-## Layout
+All are drafts and may change with a new version.
+
+## Repository layout
 
 | Path | What it holds |
 |---|---|
-| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept), the findings and coverage formats (`findings-and-coverage-v0.1.md`, `coverage-v0.2.md`) the roster file (`roster-file-v0.1.md`) and the answers file (`answers-file-v0.1.md`) |
-| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json`, `coverage-0.1.schema.json`, `coverage-0.2.schema.json`, `roster-file-0.1.schema.json` and `answers-file-0.1.schema.json` |
-| `skills/agentroster/` | The skill: `SKILL.md`, `MAP.md`, `CARDS.md`, `VALIDATION.md`, `ecosystems/` (notes and `patterns.json` for each ecosystem the search knows), `templates/` (the cards page) and `scripts/` (the four validators, `detect.mjs`, `check-map.mjs`, `redact-check.mjs`, `check-cards.mjs`, `render-cards.mjs`, `match-golden.mjs`) |
-| `examples/` | Example roster cards (`*.roster.json`), `roster.example.json`, `findings.example.json`, `coverage.example.json` and `coverage-0.2.example.json` |
-| `tests/` | Tests and synthetic fixtures (`npm test`) |
-| `package.json` | Node 20 or later; no runtime dependencies |
-| `CLAUDE.md`, `AGENTS.md` | Instructions for coding agents working on this repo |
+| `skills/agentroster/` | The skill: `SKILL.md` (start here), `MAP.md`, `CARDS.md`, `VALIDATION.md`, `ecosystems/` (notes per framework), `references/`, `templates/` (the cards page), `schema/` (copies) and `scripts/` |
+| `spec/` | The roster card standard and the file formats (versioned drafts) |
+| `schema/` | JSON Schemas for each format |
+| `examples/` | Example roster cards and example run files |
+| `tests/` | Tests and synthetic fixtures |
+| `CLAUDE.md`, `AGENTS.md` | Instructions for coding agents working on this repository |
+
+## Develop
+
+```
+npm install   # dev only: Ajv, used by the tests to cross-check the schemas
+npm test
+```
+
+The shipped scripts have no dependencies. Changes are made test-first.
 
 ## Roadmap
 
-Done: standard v0.2 draft, its JSON Schema and the card validator; findings and coverage formats and their validators; the map phase of the skill (search script, map checks, secret check, ecosystem notes); the cards phase (cards with evidence, card checks, Markdown cards and the offline cards page).
-Next: the assess and report phases.
+- **Done:** the roster card standard v0.2 draft and its schema; the coverage, findings, roster
+  file and answers file formats with validators; the map and cards phases of the skill,
+  including the cards page and asking about unsure types.
+- **Next:** the assess phase (check packs, definition score, findings), then the report.
 
 ## Contributing
 
+Issues and discussion are welcome, especially on the standard, the agent types and the checks.
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licence

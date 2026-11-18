@@ -104,8 +104,7 @@ A file with one card:
       ],
       "tools": {
         "allow": [
-          "Read",
-          "mcp__opshub__fleet"
+          "Read"
         ],
         "deny": [
           "Bash",
@@ -113,7 +112,7 @@ A file with one card:
           "Edit"
         ],
         "mcp": [
-          "opshub"
+          "mcp__opshub__fleet"
         ]
       },
       "context": [
@@ -141,10 +140,10 @@ A file with one card:
       },
       "io": {
         "in": [
-          "json"
+          "application/json"
         ],
         "out": [
-          "json"
+          "application/json"
         ],
         "report": "{decision: approve|block|ask_user, rule, reason}"
       },
