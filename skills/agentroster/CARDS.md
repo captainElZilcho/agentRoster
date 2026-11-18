@@ -140,7 +140,8 @@ A developer may keep `<id>.roster.json` beside an agent.
 - **Stored answers** (`agentroster.json` at the project root, the user's answers to step 6 of
   `SKILL.md`) apply like hand-card values: the `type` as written, with the answer's `"value"`
   line as the first evidence (`found_by: "hand"`), then the code evidence. A hand card wins
-  over an answer. List them in `map.md` under "Needs checking" as `### Stored answers` (applied,
+  over an answer; the card still lists the answer's `"value"` line in its type evidence, after
+  the hand card, so the override is on record (`check-cards.mjs` notes it too). List them in `map.md` under "Needs checking" as `### Stored answers` (applied,
   stale per `check-cards.mjs`'s `note:` lines, or overridden by a hand card), and the types
   still to ask about as `### To confirm`.
   Example: line 6 `"value": "researcher",` gives `evidence.type[0]` = `{"file":

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, writeFileSync, cpSync, rmSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, cpSync, rmSync, symlinkSync, mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -340,11 +340,31 @@ test("checkAnswers: type evidence must start with the answer's value line", () =
   assert.ok(checkAnswers(f.roster, doc, text).errors.includes('card "fetcher": type evidence must start with the agentroster.json line that holds its "value"'));
 });
 
-test("checkAnswers: a hand card's type wins over an answer", () => {
+const HAND_TYPE = { file: "app/fetcher.roster.json", line: 7, quote: '"type": "researcher",', found_by: "hand" };
+
+test("checkAnswers: a hand card's type wins over an answer, and the card keeps the answer's line", () => {
   const f = load("ok");
-  card(f, "fetcher").evidence.type = [{ file: "app/fetcher.roster.json", line: 7, quote: '"type": "researcher",', found_by: "hand" }];
   const doc = answersDoc(answer("fetcher", "builder"));
-  assert.deepEqual(checkAnswers(f.roster, doc, answersText(doc)).errors, []);
+  const text = answersText(doc);
+  const [quote, line] = valueLine(text);
+  card(f, "fetcher").evidence.type = [HAND_TYPE, { file: "agentroster.json", line, quote: quote.trim(), found_by: "hand" }];
+  assert.deepEqual(checkAnswers(f.roster, doc, text).errors, []);
+});
+
+test("checkAnswers: a hand card over an answer, with no answer line on the card, is reported", () => {
+  const f = load("ok");
+  card(f, "fetcher").evidence.type = [HAND_TYPE];
+  const doc = answersDoc(answer("fetcher", "builder"));
+  assert.ok(checkAnswers(f.roster, doc, answersText(doc)).errors.includes(
+    'card "fetcher": a hand card sets this type; also list the agentroster.json line that holds its "value" in type evidence',
+  ));
+});
+
+test("staleAnswers: an answer a hand card overrides is noted", () => {
+  const f = load("ok");
+  card(f, "fetcher").evidence.type = [HAND_TYPE];
+  const doc = answersDoc(answer("daily-digest", "orchestrator"), answer("fetcher", "builder"));
+  assert.deepEqual(staleAnswers(f.roster, doc, readProject), ['answer "fetcher" type: a hand card sets this type']);
 });
 
 test("checkAnswers: an answer for a card not in the roster is not an error", () => {
@@ -474,4 +494,27 @@ test("checkAnswers: type evidence citing a line without the answer's value is re
   const doc = answersDoc(answer("fetcher", "researcher"));
   card(f, "fetcher").evidence.type = [{ file: "agentroster.json", line: 2, quote: '"agentroster": "0.1",', found_by: "hand" }];
   assert.ok(checkAnswers(f.roster, doc, answersText(doc)).errors.includes('card "fetcher": type evidence must start with the agentroster.json line that holds its "value"'));
+});
+
+test("CLI: notes print even when the run fails", () => {
+  withAnswersProject(answersDoc(answer("fetcher", "builder"), answer("ghost", "builder")), (runDir, project) => {
+    const r = cli([runDir, "--project", project]);
+    assert.equal(r.code, 1);
+    assert.match(r.out, /note: answer "ghost" type: no such card any more/);
+  });
+});
+
+test("CLI: an agentroster.json that is a link or a folder exits 2; it is never treated as absent", () => {
+  for (const make of [
+    (p) => { const t = path.join(p, "..", "real.json"); writeFileSync(t, '{"agentroster": "0.1", "answers": []}'); return symlinkSync(t, path.join(p, "agentroster.json")); },
+    (p) => mkdirSync(path.join(p, "agentroster.json")),
+  ]) {
+    withAnswersProject('{"agentroster": "0.1", "answers": []}', (runDir, project) => {
+      rmSync(path.join(project, "agentroster.json"));
+      make(project);
+      const r = cli([runDir, "--project", project]);
+      assert.equal(r.code, 2, r.out + r.err);
+      assert.match(r.err, /^cannot read agentroster\.json \((is a link|is a folder)\)/);
+    });
+  }
 });

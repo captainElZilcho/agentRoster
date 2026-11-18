@@ -90,3 +90,9 @@ test("the CLI prints ok for a valid file and exits 0", () => {
   assert.equal(r.status, 0);
   assert.match(r.stdout, /^ok /);
 });
+
+test("an empty based_on quote is an error", () => {
+  const d = load();
+  d.answers[0].based_on.quote = "";
+  fails(d, "/answers/0/based_on/quote", /.+/);
+});

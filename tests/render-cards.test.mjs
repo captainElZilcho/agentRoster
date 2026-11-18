@@ -234,3 +234,13 @@ test("the Markdown card puts the note next to the type", () => {
   withJudgement(f.roster.cards.find((x) => x.id === "fetcher"), { confidence: "low", runner_up: "builder", why: "x" });
   assert.match(renderCardMarkdown(viewOf(f, "fetcher")), /· researcher \(to confirm \(could be builder\)\) ·/);
 });
+
+test("a hand-card type over a stored answer shows from hand card, over your answer", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.evidence.type = [
+    { file: "app/fetcher.roster.json", line: 7, quote: '"type": "researcher",', found_by: "hand" },
+    { file: "agentroster.json", line: 6, quote: '"value": "builder",', found_by: "hand" },
+  ];
+  assert.equal(viewOf(f, "fetcher").typeNote, "from hand card, over your answer");
+});

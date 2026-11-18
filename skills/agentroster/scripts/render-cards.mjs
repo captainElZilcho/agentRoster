@@ -205,8 +205,11 @@ export function cardView(card, roster, unknowns = []) {
 
   const typeEvidence = evidence.type ?? [];
   const judged = ext?.judgement?.type;
-  const typeNote = typeEvidence[0]?.file === "agentroster.json" && typeEvidence[0]?.found_by === "hand"
+  const fromAnswersFile = (i) => i?.file === "agentroster.json" && i?.found_by === "hand";
+  const typeNote = fromAnswersFile(typeEvidence[0])
     ? "from your answers"
+    : typeEvidence[0]?.found_by === "hand" && typeEvidence.some(fromAnswersFile)
+      ? "from hand card, over your answer"
     : judged && judged.confidence !== "high" && !typeEvidence.some((i) => i.found_by === "hand")
       ? `to confirm (could be ${judged.runner_up})`
       : undefined;

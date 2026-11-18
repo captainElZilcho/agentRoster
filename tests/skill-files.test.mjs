@@ -493,3 +493,10 @@ test("SKILL.md's ask step asks again about a stale stored answer, with the old v
   assert.match(step, /stale stored answer/);
   assert.match(step, /stored value as the default/);
 });
+
+test("CARDS.md and the answers spec say a card keeps the answer a hand card overrides", () => {
+  const cards = read("CARDS.md").replace(/\s+/g, " ");
+  assert.match(cards, /A hand card wins over an answer; the card still lists the answer's `"value"` line in its type evidence, after the hand card/);
+  const spec = fs.readFileSync(path.join(process.cwd(), "spec/answers-file-v0.1.md"), "utf8").replace(/\s+/g, " ");
+  assert.match(spec, /the card still records the answer/);
+});

@@ -5,7 +5,7 @@
 // has an agentroster.json, that each stored answer is on its card (stale answers are noted).
 // Usage: check-cards.mjs <run-dir> --project <dir>
 
-import { readFileSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "./lib/cli.mjs";
 import { canonicalJson, compareText } from "./lib/order.mjs";
@@ -266,14 +266,23 @@ export function checkAnswers(roster, answers, answersText) {
   const errors = [];
   const lines = String(answersText).replace(/^\uFEFF/, "").split(/\r?\n/);
   const byId = new Map((roster.cards ?? []).map((c) => [c.id, c]));
+  // a.value is a type code (the schema checked it), so it is safe inside the pattern.
+  const isAnswerItem = (item, a) =>
+    item?.file === ANSWERS_FILE && item?.found_by === "hand" && Number.isInteger(item?.line) &&
+    new RegExp(`"value"\\s*:\\s*"${a.value}"`).test(lines[item.line - 1] ?? "");
   for (const a of answers.answers) {
     const card = byId.get(a.card);
-    if (!card || typeByHandCard(card)) continue;
+    if (!card) continue;
+    const items = card.evidence?.type ?? [];
+    if (typeByHandCard(card)) {
+      // The hand card wins; the card still records the answer it overrides.
+      if (!items.some((i) => isAnswerItem(i, a))) {
+        errors.push(`card "${a.card}": a hand card sets this type; also list the ${ANSWERS_FILE} line that holds its "value" in type evidence`);
+      }
+      continue;
+    }
     if (card.type !== a.value) errors.push(`card "${a.card}": type is "${card.type}" but ${ANSWERS_FILE} says "${a.value}"`);
-    const first = card.evidence?.type?.[0];
-    const cited = Number.isInteger(first?.line) ? lines[first.line - 1] : undefined;
-    const holdsValue = cited !== undefined && new RegExp(`"value"\\s*:\\s*"${a.value}"`).test(cited);
-    if (first?.file !== ANSWERS_FILE || first?.found_by !== "hand" || !holdsValue) {
+    if (!isAnswerItem(items[0], a)) {
       errors.push(`card "${a.card}": type evidence must start with the ${ANSWERS_FILE} line that holds its "value"`);
     }
   }
@@ -289,12 +298,16 @@ export function checkAnswers(roster, answers, answersText) {
  * @returns {string[]}
  */
 export function staleAnswers(roster, answers, readFile) {
-  const ids = new Set((roster.cards ?? []).map((c) => c.id));
+  const byId = new Map((roster.cards ?? []).map((c) => [c.id, c]));
   const out = [];
   for (const a of answers.answers) {
     const at = `answer "${a.card}" ${a.field}`;
-    if (!ids.has(a.card)) {
+    if (!byId.has(a.card)) {
       out.push(`${at}: no such card any more`);
+      continue;
+    }
+    if (typeByHandCard(byId.get(a.card))) {
+      out.push(`${at}: a hand card sets this type`);
       continue;
     }
     if (!a.based_on) continue;
@@ -338,6 +351,26 @@ function readJson(file) {
   }
 }
 
+/** The project's agentroster.json text, or null when there is none. A link, a folder or an
+ * unreadable file is an error, never "no file" (redact-check blocks a linked one too). */
+function readAnswersText(project) {
+  const file = path.join(project, ANSWERS_FILE);
+  let st;
+  try {
+    st = lstatSync(file);
+  } catch (err) {
+    if (err.code === "ENOENT") return null;
+    throw new CliError(`cannot read ${ANSWERS_FILE} (${reason(err)})`);
+  }
+  if (st.isSymbolicLink()) throw new CliError(`cannot read ${ANSWERS_FILE} (is a link)`);
+  if (st.isDirectory()) throw new CliError(`cannot read ${ANSWERS_FILE} (is a folder)`);
+  try {
+    return readFileSync(file, "utf8");
+  } catch (err) {
+    throw new CliError(`cannot read ${ANSWERS_FILE} (${reason(err)})`);
+  }
+}
+
 /** @returns {number} Exit code: 0 ok, 1 problems, 2 a file can't be used. */
 export function runCheckCardsCli(args) {
   try {
@@ -363,7 +396,7 @@ export function runCheckCardsCli(args) {
       }
     };
     const errors = [...checkCards(roster, coverage, mapText).errors, ...checkQuotes(roster, coverage, readFile).errors];
-    const answersText = readFile(ANSWERS_FILE);
+    const answersText = readAnswersText(project);
     let notes = [];
     if (answersText !== null) {
       let answers;
@@ -379,13 +412,10 @@ export function runCheckCardsCli(args) {
       notes = staleAnswers(roster, answers, readFile);
     }
     const result = { valid: errors.length === 0, errors: [...new Set(errors)].sort(compareText) };
-    if (result.valid) {
-      console.log(`ok ${dir}`);
-      for (const n of notes) console.log(`note: ${n}`);
-      return 0;
-    }
-    for (const e of result.errors) console.log(e);
-    return 1;
+    if (result.valid) console.log(`ok ${dir}`);
+    else for (const e of result.errors) console.log(e);
+    for (const n of notes) console.log(`note: ${n}`);
+    return result.valid ? 0 : 1;
   } catch (err) {
     console.error(err instanceof CliError ? err.message : "error: unexpected failure");
     return 2;

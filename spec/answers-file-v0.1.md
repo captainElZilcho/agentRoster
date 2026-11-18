@@ -48,7 +48,9 @@ No other keys are allowed in v0.1.
 - On every run, an answer sets that card's field as written. It counts as a person's word,
   like a value from a hand-written card: the card's evidence for the field starts with the
   answers file's `value` line, marked `found_by: "hand"`.
-- A hand-written card (`<id>.roster.json`) that sets the same field wins over the answer.
+- A hand-written card (`<id>.roster.json`) that sets the same field wins over the answer, but
+  the card still records the answer: its evidence lists the answers file's `value` line after the
+  hand card, and the run notes the override.
 - An answer for a card that no longer exists, or whose `based_on` line is no longer in its
   file, is kept and reported as stale, never dropped. When it can ask, the skill asks again,
   with the old answer as the default.
