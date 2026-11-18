@@ -64,4 +64,8 @@ agent gets which server's tools.
   `${VAR}` references point to env variables. Cite the file and line, never the value.
 - **Prompts from a server** (`@mcp.prompt()`) are templates a person or host picks; they are not
   an agent's instructions unless an agent loads them.
-- **A server package run with `npx` or `uvx`** has its code outside the repo. Don't fetch it.
+- **A server run with `npx` or `uvx`** has its code outside the repo; don't fetch it. Add an
+  `outside-repo` unknown on `tools.mcp` for each agent that uses it, even when the agent names its
+  tools: the repo can't show the tool exists or what it does. Evidence: the `command` line.
+  Example: `"command": "npx"` for server `issues`, with the agent listing
+  `mcp__issues__get_issue`, gives `tools.mcp: ["mcp__issues__get_issue"]` plus that unknown.

@@ -201,3 +201,36 @@ test("a top-level agent with starts shows a Starts tile in Runs on", () => {
   assert.ok(v.groups[0].tiles.some((t) => t.label === "Starts"));
   assert.match(renderCardMarkdown(v), /- Starts: command line\n/);
 });
+
+// Stored answers and judgement calls
+
+const ANSWER_EVIDENCE = { file: "agentroster.json", line: 6, quote: '"value": "researcher",', found_by: "hand" };
+const withJudgement = (c, j) => ((c.extensions[CARD_VIEW_NS] ??= {}).judgement = { type: j });
+
+test("a type from the answers file shows as from your answers, in the Sources too", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.evidence.type = [ANSWER_EVIDENCE];
+  const v = viewOf(f, "fetcher");
+  assert.equal(v.typeNote, "from your answers");
+  assert.equal(v.sources.find((s) => s.where.startsWith("agentroster.json")).from, "your answers");
+});
+
+test("a type below high confidence with no answer shows to confirm and the runner-up", () => {
+  const f = load("ok");
+  withJudgement(f.roster.cards.find((x) => x.id === "fetcher"), { confidence: "medium", runner_up: "builder", why: "x" });
+  assert.equal(viewOf(f, "fetcher").typeNote, "to confirm (could be builder)");
+});
+
+test("a high-confidence type, or one with no judgement, has no note", () => {
+  const f = load("ok");
+  assert.equal(viewOf(f, "fetcher").typeNote, undefined);
+  withJudgement(f.roster.cards.find((x) => x.id === "fetcher"), { confidence: "high", runner_up: null, why: "x" });
+  assert.equal(viewOf(f, "fetcher").typeNote, undefined);
+});
+
+test("the Markdown card puts the note next to the type", () => {
+  const f = load("ok");
+  withJudgement(f.roster.cards.find((x) => x.id === "fetcher"), { confidence: "low", runner_up: "builder", why: "x" });
+  assert.match(renderCardMarkdown(viewOf(f, "fetcher")), /· researcher \(to confirm \(could be builder\)\) ·/);
+});

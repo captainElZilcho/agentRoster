@@ -483,3 +483,37 @@ test("URL credentials are read even when the URL will not parse", () => {
   put(root, ".mcp.json", JSON.stringify({ mcpServers: { a: { args: [`https://user:${pw}@x.test:99999/mcp`] } } }));
   assert.ok(readConfigValues(root).includes(pw));
 });
+
+test("CLI: the project's agentroster.json is scanned too", () => {
+  const project = tmp();
+  put(project, ".env", "API_KEY=FAKE-answers-env-value-0001\n");
+  put(project, "agentroster.json", '{\n  "agentroster": "0.1",\n  "answers": [\n    {"quote": "key = FAKE-answers-env-value-0001"}\n  ]\n}\n');
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /leak: agentroster\.json:4 \(/);
+  assert.ok(!r.stdout.includes("FAKE-answers-env-value-0001"));
+});
+
+test("CLI: a clean agentroster.json counts as a checked file", () => {
+  const project = tmp();
+  put(project, "agentroster.json", '{"agentroster": "0.1", "answers": []}\n');
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, "clean: 2 files\n");
+});
+
+test("CLI: a linked agentroster.json is blocked, never read", () => {
+  const project = tmp();
+  const outside = tmp();
+  put(outside, "real.json", "{}\n");
+  fs.symlinkSync(path.join(outside, "real.json"), path.join(project, "agentroster.json"));
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /blocked: agentroster\.json \(link in the project\)/);
+});

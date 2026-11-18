@@ -37,6 +37,11 @@ check the cards and draw them as Markdown and as an HTML page.
 - **Ids** come from the map; the order for choosing them is in `MAP.md`.
 - **`name`** is the agent's name as the code or its prompt gives it (or the id in words), with
   evidence like any value: the line it came from (a `name` field, the variable, the prompt's role).
+- **`runtime` (where and how it runs)** is one line: framework or SDK and language, where it
+  sits, and for a top-level card what starts it. Evidence: the import or build line, and the
+  start line. The card-view `runtime_name` is only the short name; fill both.
+  Example: `graph.add_node("scout", scout.run)` in a LangGraph app gives `"Node in the
+  daily_advisor LangGraph graph (Python)"`; `runtime_name` is `"LangGraph"`.
 - **`purpose` (the card's sub-line)** is one sentence on what it is for, starting with a verb
   ("Finds new items worth reading…"). Write it from every line that states the agent's job: a
   declared description (frontmatter `description:`, a `description=` argument, an A2A card), a
@@ -44,6 +49,13 @@ check the cards and draw them as Markdown and as an HTML page.
   description leads; the others may add to it. Evidence lists every line you drew on. A goal
   copied word for word is not a purpose: it goes in `goals`. When nothing states the job, write
   it from what the code does and cite those lines.
+- **`goals` (what it aims for)** come only from lines marked as goals: a `Goal:` line in a
+  prompt, a framework's `goal=` field, or a `goal:` on a role card. One item per goal, copied as
+  written, capital first letter. The prompt's opening job sentence is the purpose, not a goal.
+  With no such line, `[]`.
+  Example: `goal="Find the help articles that answer the customer's question."` gives
+  `["Find the help articles that answer the customer's question."]`; `You are a notes
+  assistant. Find what the user wrote…` gives `[]`.
 - **`role` (the card's job)** is a few plain lines on what it does and doesn't do; fill it on
   every card. For an agent: what it takes in, what it does (and whether the model picks its own
   tools or steps), what it hands on, and one thing it does not do. For a workflow: its steps in
@@ -57,7 +69,19 @@ check the cards and draw them as Markdown and as an HTML page.
   `io.out` is how the reply is used: parsed as JSON, or a prompt that says "Return JSON", is
   `application/json`; files the agent writes take the files' type (`text/x-python`,
   `text/markdown`); plain prose is `text/plain`. Evidence is the line that builds the message and
-  the line that parses or uses the reply. `io.report` is filled only from a stated output line.
+  the line that parses or uses the reply.
+- **`io.report` (the shape of its final output)** comes from a line that states it: a format in
+  the prompt or role card (even inside the task sentence), a CrewAI `expected_output`, or for a
+  top-level workflow the line that returns or prints its result. A goal line is not a format
+  ("Goal: give a short answer" stays in `goals`). Without such a line, `null`.
+  Example: `system: "Summarize the text in three short bullet points."` gives `"Three short
+  bullet points."`; `return {"run_id": …, "ranking": …}` gives `"JSON with run_id and ranking"`.
+- **`context` (what it loads at start)** lists files put into the model's context before it
+  begins: instruction files (`CLAUDE.md`, `AGENTS.md`) or a document read into the prompt. Data
+  a tool reads during the run is not context; the tool shows it. The prompt itself is
+  `instructions`.
+  Example: a Claude Code subagent gives `["CLAUDE.md"]`; `notes =
+  json.loads(Path("notes.json").read_text())` inside a search tool gives nothing.
 - **`source.files` (where it is defined)** lists, in this order: the line where it is built (the
   constructor, the `StateGraph(...)` or `Agent(...)` call, not a later `compile`); its own prompt
   or definition file, as a whole file (`line: null`); and for a top-level card, each file that
@@ -92,8 +116,7 @@ check the cards and draw them as Markdown and as an HTML page.
   not memory; a trigger is not input; a handoff is recorded only where one carded step passes work
   straight to another; a run-wide budget belongs to the workflow and a limit inside one agent's
   loop belongs to that agent; the main prompt is `instructions` and a shared skill file appended
-  to it is a skill; the output format (`io.report`) is filled only from a stated output line
-  apart from the goal; `instructions` is a path when the prompt lives in a file and the text when
+  to it is a skill; `io.report` comes only from a line that states the output (above); `instructions` is a path when the prompt lives in a file and the text when
   it lives in code; a check the pipeline runs between steps belongs to the pipeline's card.
 - **Do not fill** `ratings` (all `"unrated"`), `definition` (`null`), `stats` (`null`),
   `headline_stats` (`[]`) or `status` (`null`). The assessment sets them later.
@@ -105,10 +128,23 @@ A developer may keep `<id>.roster.json` beside an agent.
 - **Its values replace scanned ones.** Use them as written, with the hand card as the first
   evidence item (`found_by: "hand"`). When the code shows the same field, add the code evidence
   after it.
+- **Every field it sets wins, `source.files` included:** use its list as written, even when the
+  recipe in section 2 would give another. The hand card file itself shows through evidence, not
+  in `source.files`, since the agent never loads it.
+  Example: a hand card with `"files": [{"path": "filer.py", "line": null}]` gives exactly that
+  list, not `filer.py:38` plus `filer.roster.json`.
 - **Fields it leaves empty are filled from the code**, with code evidence.
 - **When it disagrees with the code** (for example `permission: read-only` while a tool writes
   files), keep the hand value, add the code evidence beside it, and leave the gap for the
   assessment to report. Never "fix" a hand card.
+- **Stored answers** (`agentroster.json` at the project root, the user's answers to step 6 of
+  `SKILL.md`) apply like hand-card values: the `type` as written, with the answer's `"value"`
+  line as the first evidence (`found_by: "hand"`), then the code evidence. A hand card wins
+  over an answer. List them in `map.md` under "Needs checking" as `### Stored answers` (applied,
+  stale per `check-cards.mjs`'s `note:` lines, or overridden by a hand card), and the types
+  still to ask about as `### To confirm`.
+  Example: line 6 `"value": "researcher",` gives `evidence.type[0]` = `{"file":
+  "agentroster.json", "line": 6, "quote": "\"value\": \"researcher\",", "found_by": "hand"}`.
 - **A hand card with no matching code** keeps its id and card; its candidate in `coverage.json` has
   `validation.status: "needs-checking"`.
 - **A file name that doesn't match its `id`** (`a.roster.json` with `"id": "b"`): use the `id`, and
@@ -148,6 +184,13 @@ io.github.captainelzilcho.agentroster.card-view/v1
 - `starts` goes on any top-level card, agent or workflow (one that reports to no other card): what
   starts it from outside, such as a schedule, a command, an HTTP endpoint or a chat. A card that
   reports to another is started by it, so it has no `starts`.
+- **`judgement`** says how sure you are of the card's `type`, with the runner-up: `high` when
+  one type fits the job and no other is close; `medium` when another fits but yours is better;
+  `low` when two fit about equally. `runner_up` is `null` only when `high`; `why` cites the
+  deciding line. Leave it out when a hand card or a stored answer set the type. It needs no
+  `evidence` entry.
+  Example: `"judgement": {"type": {"confidence": "medium", "runner_up": "builder", "why": "Its
+  output is the reply the customer reads (crew_desk/main.py:13)."}}`.
 - `stated_only` lists card field paths (such as `"guardrails.limits.turns"`) whose value is only
   stated in a prompt.
 - Evidence for these values goes in the extension's own `evidence` map, one key per field, same

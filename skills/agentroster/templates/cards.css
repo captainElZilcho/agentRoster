@@ -38,6 +38,7 @@ main { max-width: 1240px; margin: 0 auto; }
 .tag { font: 12px/1 var(--data); padding: 4px 8px; border-radius: 999px; border: 1px solid var(--chip-line); }
 .tag.agent { color: var(--agent); border-color: var(--agent-line); }
 .tag.workflow { color: var(--workflow); border-color: var(--workflow-line); }
+.tag.type-note { border-style: dashed; color: var(--ink-2); }
 .strip { padding: 9px 16px; border-bottom: 1px solid var(--line); background: var(--unknown-bg); color: var(--unknown); font-size: 12.5px; }
 .strip ul { margin: 2px 0 0; padding-left: 18px; }
 .specs { padding: 12px 16px; border-bottom: 1px solid var(--line); }

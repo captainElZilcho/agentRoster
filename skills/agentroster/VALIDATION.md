@@ -65,11 +65,12 @@ The same two roles, the same rounds and modes. The validator gets `roster.json`,
    not show is empty. A value that lives outside the code is empty with an unknown in
    `coverage.json`.
 3. **Kind and type.** The kind follows the identity rule; the type follows the job, and its
-   deciding line is quoted.
+   deciding line is quoted. The `judgement` fits the pick (a close runner-up is not `high`).
 4. **Guardrails.** A limit is enforced in code, or it is listed as stated only; permission comes
    only from a declared setting.
-5. **Hand cards.** Every value a hand card sets is on the card as written, with the hand card as
-   its first evidence; disagreements with the code are kept, not fixed.
+5. **Hand cards and stored answers.** Every value a hand card or `agentroster.json` sets is on
+   the card as written, with that file as its first evidence; disagreements with the code are
+   kept, not fixed.
 6. **The card-view extension.** `steps` are in the order the code runs them, and every filled
    value in it has evidence.
 

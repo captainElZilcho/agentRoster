@@ -28,7 +28,8 @@ built yet. Do not write findings or reports by hand.
 ## Rules for the whole run
 
 - **Read only.** Never run, build, test or install the project. Never edit, move or delete its
-  files. The only files you write are in the run folder.
+  files. You write in the run folder. The only file you write in the project is
+  `agentroster.json`, and only after the user says yes (step 6).
 - **Never fetch.** A prompt or setting that comes from a database, a URL, an API or an
   environment variable is recorded as unknown ("loaded from X"). Never fetch it.
 - **Never open secret files:** `.env` and `.env.*` (including `.env.example`), `*.pem`, `*.key`,
@@ -57,11 +58,12 @@ node <skill>/scripts/redact-check.mjs <run> --project <project>
 node <skill>/scripts/validate-card.mjs <run>/roster.json
 node <skill>/scripts/check-cards.mjs <run> --project <project>
 node <skill>/scripts/render-cards.mjs <run>
+node <skill>/scripts/validate-answers.mjs <project>/agentroster.json
 ```
 
-Exit codes: `0` ok and `2` a file or folder could not be used, for all seven. `1` (problems
+Exit codes: `0` ok and `2` a file or folder could not be used, for all eight. `1` (problems
 found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `redact-check.mjs`,
-`validate-card.mjs` and `check-cards.mjs`; `detect.mjs` and `render-cards.mjs` exit `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
+`validate-card.mjs`, `check-cards.mjs` and `validate-answers.mjs`; `detect.mjs` and `render-cards.mjs` exit `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
 
 ## Step 1: setup
 
@@ -86,9 +88,12 @@ found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `r
 5. **Previous run.** If the output folder already holds `run-*` folders, the newest one (latest
    date, then highest `N`) is the previous run. Note its id. Read its `map.md` only to reuse the
    same ids for the same agents; never copy its findings into this run.
-6. **Mode.** `standard` unless the user asks for `quick` or `thorough`. The mode changes only
+6. **Stored answers.** If `<project>/agentroster.json` exists, run `validate-answers.mjs` on
+   it. If it is invalid, stop and tell the user the error; never rewrite it to fix it. Valid
+   answers are applied in the cards (`CARDS.md`, "Stored answers").
+7. **Mode.** `standard` unless the user asks for `quick` or `thorough`. The mode changes only
    the checking (see `VALIDATION.md`), never the search.
-7. Create the run folder. It holds only the files this run writes.
+8. Create the run folder. It holds only the files this run writes.
 
 The snapshot in `coverage.json` comes from this step:
 
@@ -150,7 +155,34 @@ Follow `CARDS.md`. It says how to write one card per agent and workflow in the m
 `check-cards.mjs`, the validator in `VALIDATION.md` section 3, `redact-check.mjs`) and draw them
 (`render-cards.mjs`). The roster's snapshot is the same as `coverage.json`'s.
 
-## Step 6: tell the user
+## Step 6: ask
+
+Ask the user about each card whose `type` judgement is below `high` (`CARDS.md`, `judgement`)
+and that has no stored answer and no hand-card type. Don't ask when the user said not to ask,
+or when the prompt that started the run says no person is there (a CI job, a test run): then
+list those cards under "To confirm" and go to step 7. Otherwise asking is the default. Also ask
+about each stale stored answer (`check-cards.mjs` `note:` lines), with the stored value as the
+default; when nobody can be asked, list it under "To confirm".
+
+1. One question per card, in inventory order: the card, your pick, the runner-up, and why,
+   with the deciding line. The user keeps the pick, takes the runner-up, names another type,
+   or skips.
+2. Ask once: "Save these answers to `agentroster.json` in the project, so later runs use them?"
+   Write it only after a yes, sorted by card, with two-space indent. A skipped question stays
+   to confirm and is asked next run.
+3. On a yes, apply every saved answer, kept or changed, to `roster.json` as a stored answer
+   (`CARDS.md`: the `"value"` line first, no `judgement`). On a no, change only the types the
+   user changed, keep the code evidence, and drop their `judgement`. Then run
+   `validate-card.mjs`, `check-cards.mjs`, `redact-check.mjs` and `render-cards.mjs` again.
+
+Example: "triage: I picked researcher (could be specialist). It reads the ticket and looks up
+the order, and writes nothing (`crew_desk/crew.py:14`). Keep researcher?"
+
+To change an answer later, the user can edit `agentroster.json`, or ask you during a run (you
+change the card, then ask before writing the file). Deleting an answer makes the next run ask
+again.
+
+## Step 7: tell the user
 
 Say, in a few short lines:
 
@@ -160,4 +192,6 @@ Say, in a few short lines:
 - how many files were skipped, and why;
 - where the cards are (`cards.html` to open in a browser, `cards/` for one Markdown file each);
 - any warning from the cards phase (a hand card whose file name doesn't match its id);
+- how many type questions were asked, answered, saved and still to confirm, and any stale
+  stored answer (`check-cards.mjs` prints them as `note:` lines);
 - that the assess and report phases are not built yet, so the run stops after the cards.

@@ -347,3 +347,149 @@ test("CARDS.md says how prompt-stated bans fill guardrails.forbidden", () => {
   assert.match(bullet, /"only[^"]*"[^.]*not a ban/i);
   assert.match(bullet, /never in `stated_only`/);
 });
+
+test("CARDS.md says what runtime holds, with an example", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`runtime`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about runtime");
+  const bullet = text.slice(at, at + 700);
+  assert.match(bullet, /Example:/);
+  assert.match(bullet, /`runtime_name`/);
+});
+
+test("CARDS.md says where io.report comes from, with an example", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`io.report`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about io.report");
+  const bullet = text.slice(at, at + 700);
+  assert.match(bullet, /expected_output/);
+  assert.match(bullet, /top-level workflow/);
+  assert.match(bullet, /Example:/);
+  assert.doesNotMatch(text, /apart from the goal/);
+});
+
+test("CARDS.md says what context holds, with an example", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`context`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about context");
+  const bullet = text.slice(at, at + 600);
+  assert.match(bullet, /before it begins/);
+  assert.match(bullet, /tool reads during the run is not context/);
+  assert.match(bullet, /Example:/);
+});
+
+test("CARDS.md says goals come only from lines marked as goals, with an example", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**`goals`");
+  assert.ok(at >= 0, "CARDS.md has a bullet about goals");
+  const bullet = text.slice(at, at + 700);
+  assert.match(bullet, /marked as goals/);
+  assert.match(bullet, /goal=/);
+  assert.match(bullet, /Example:/);
+});
+
+test("mcp.md says an npx or uvx server gets an unknown on tools.mcp even when tools are named", () => {
+  const text = read("ecosystems/mcp.md").replace(/\s+/g, " ");
+  const at = text.indexOf("**A server run with `npx` or `uvx`**");
+  assert.ok(at >= 0, "mcp.md has the npx/uvx rule");
+  const rule = text.slice(at, at + 600);
+  assert.match(rule, /`outside-repo` unknown on `tools\.mcp`/);
+  assert.match(rule, /even when the agent names its tools/);
+  assert.match(rule, /Example:/);
+});
+
+test("CARDS.md says a hand card's source.files wins as written, with an example", () => {
+  const text = read("CARDS.md").replace(/\s+/g, " ");
+  const at = text.indexOf("## 3. Hand-written cards win");
+  const section = text.slice(at, text.indexOf("## 4.", at));
+  assert.match(section, /`source\.files` included/);
+  assert.match(section, /Example:/);
+});
+
+// Ask, then remember (agentroster.json)
+
+const flat = (file) => read(file).replace(/\s+/g, " ");
+const repoFlat = (file) => fs.readFileSync(path.join(process.cwd(), file), "utf8").replace(/\s+/g, " ");
+
+test("SKILL.md setup reads and validates agentroster.json; an invalid file stops the run", () => {
+  const t = flat("SKILL.md");
+  const setup = t.slice(t.indexOf("## Step 1: setup"), t.indexOf("## Step 2"));
+  assert.match(setup, /agentroster\.json/);
+  assert.match(setup, /validate-answers\.mjs/);
+  assert.match(setup, /invalid[^.]*stop/i);
+});
+
+test("SKILL.md has an ask step after the cards with the save question and when not to ask", () => {
+  const t = flat("SKILL.md");
+  const at = t.indexOf("## Step 6: ask");
+  assert.ok(at > t.indexOf("## Step 5: the cards"), "an ask step comes after the cards");
+  const step = t.slice(at, t.indexOf("## Step 7"));
+  assert.match(step, /below `high`/);
+  assert.match(step, /runner-up/);
+  assert.match(step, /Save these answers to `agentroster\.json`/);
+  assert.match(step, /only (on|after) (a|the user's) yes/i);
+  assert.match(step, /said not to ask/);
+  assert.match(step, /no person/);
+  assert.match(step, /Example:/);
+});
+
+test("SKILL.md says the only project write is agentroster.json, and how to change an answer", () => {
+  const t = flat("SKILL.md");
+  assert.match(t, /The only file you write in the project is `agentroster\.json`, and only after the user says yes/);
+  assert.match(t, /edit `agentroster\.json`|edit the file/i);
+  assert.match(t, /asked, answered, saved and still to confirm/);
+});
+
+test("SKILL.md lists validate-answers.mjs among the scripts", () => {
+  assert.match(read("SKILL.md"), /node <skill>\/scripts\/validate-answers\.mjs <project>\/agentroster\.json/);
+});
+
+test("CARDS.md says how to record the judgement and how to apply stored answers", () => {
+  const t = flat("CARDS.md");
+  const j = t.slice(t.indexOf("**`judgement`"));
+  assert.ok(t.includes("**`judgement`"), "CARDS.md has a judgement bullet");
+  assert.match(j.slice(0, 900), /`high`[^.]*one type fits/);
+  assert.match(j.slice(0, 900), /Example:/);
+  const a = t.slice(t.indexOf("**Stored answers"));
+  assert.ok(t.includes("**Stored answers"), "CARDS.md has a stored answers bullet");
+  assert.match(a.slice(0, 900), /`"value"` line/);
+  assert.match(a.slice(0, 900), /hand card wins/i);
+  assert.match(a.slice(0, 900), /Example:/);
+  assert.match(t, /### Stored answers/);
+  assert.match(t, /### To confirm/);
+  assert.match(t, /under "Needs checking"/);
+});
+
+test("VALIDATION.md's cards checklist covers stored answers and the judgement", () => {
+  const t = flat("VALIDATION.md");
+  const cards = t.slice(t.indexOf("## 3. What the validator checks (cards)"), t.indexOf("## 4."));
+  assert.match(cards, /agentroster\.json/);
+  assert.match(cards, /judgement/);
+});
+
+test("README, CLAUDE.md and CONTRIBUTING name agentroster.json as the one file written in a project", () => {
+  for (const file of ["README.md", "CLAUDE.md", "CONTRIBUTING.md"]) {
+    assert.match(repoFlat(file), /agentroster\.json/, file);
+  }
+  assert.doesNotMatch(repoFlat("README.md"), /never edits your files\./);
+});
+
+test("CARDS.md says a goal line is not an output format", () => {
+  const t = read("CARDS.md").replace(/\s+/g, " ");
+  const bullet = t.slice(t.indexOf("**`io.report`"), t.indexOf("**`io.report`") + 900);
+  assert.match(bullet, /A goal line is not a format/);
+});
+
+test("SKILL.md's ask step applies every saved answer, kept or changed, after saving", () => {
+  const t = read("SKILL.md").replace(/\s+/g, " ");
+  const step = t.slice(t.indexOf("## Step 6: ask"), t.indexOf("## Step 7"));
+  assert.match(step, /apply every saved answer, kept or changed/i);
+  assert.ok(step.indexOf("Save these answers") < step.indexOf("apply every saved answer"), "apply comes after the save question");
+});
+
+test("SKILL.md's ask step asks again about a stale stored answer, with the old value as default", () => {
+  const t = read("SKILL.md").replace(/\s+/g, " ");
+  const step = t.slice(t.indexOf("## Step 6: ask"), t.indexOf("## Step 7"));
+  assert.match(step, /stale stored answer/);
+  assert.match(step, /stored value as the default/);
+});

@@ -9,7 +9,8 @@ especially on the spec, the agent types and the assessment checks.
   new ideas can start as a namespaced extension.
 - **New check packs:** the pack anatomy will be documented with the skill; the findings format
   is being drafted in `spec/`.
-- **Adapters:** read-only, never invent values, never copy secrets.
+- **Adapters:** read-only (the skill's one project write is `agentroster.json`, only on the
+  user's yes), never invent values, never copy secrets.
 - **Design changes:** open an issue; the maintainer records decisions.
 
 By contributing you agree that your contributions are licensed under the Apache License 2.0.

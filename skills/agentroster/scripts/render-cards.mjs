@@ -77,7 +77,10 @@ export function cardView(card, roster, unknowns = []) {
   const statedOnly = new Set(Array.isArray(ext?.stated_only) ? ext.stated_only : []);
   const fromHand = (field) =>
     Object.entries(evidence).some(([k, items]) => covers(k, field) && items.some((i) => i.found_by === "hand"));
-  const marker = (field) => (statedOnly.has(field) ? "stated, not enforced" : fromHand(field) ? "from hand card" : undefined);
+  const fromAnswers = (field) =>
+    Object.entries(evidence).some(([k, items]) => covers(k, field) && items.some((i) => i.found_by === "hand" && i.file === "agentroster.json"));
+  const marker = (field) =>
+    statedOnly.has(field) ? "stated, not enforced" : fromAnswers(field) ? "from your answers" : fromHand(field) ? "from hand card" : undefined;
   const tile = (label, value, field, extra = {}) => {
     const t = { label, value, ...extra };
     const m = field ? marker(field) : undefined;
@@ -187,7 +190,7 @@ export function cardView(card, roster, unknowns = []) {
     value: asText(value),
     where: item.line === null || item.line === undefined ? item.file : `${item.file}:${item.line}`,
     quote: item.quote ?? "",
-    from: item.found_by === "hand" ? "hand card" : "code",
+    from: item.found_by !== "hand" ? "code" : item.file === "agentroster.json" ? "your answers" : "hand card",
   });
   const sources = [];
   for (const key of coreKeys) for (const item of evidence[key]) sources.push(row(key, getPath(card, key), item));
@@ -200,6 +203,14 @@ export function cardView(card, roster, unknowns = []) {
     ? `${card.definition.score} of 5`
     : "not rated yet";
 
+  const typeEvidence = evidence.type ?? [];
+  const judged = ext?.judgement?.type;
+  const typeNote = typeEvidence[0]?.file === "agentroster.json" && typeEvidence[0]?.found_by === "hand"
+    ? "from your answers"
+    : judged && judged.confidence !== "high" && !typeEvidence.some((i) => i.found_by === "hand")
+      ? `to confirm (could be ${judged.runner_up})`
+      : undefined;
+
   return {
     id: card.id,
     name: card.name,
@@ -208,6 +219,7 @@ export function cardView(card, roster, unknowns = []) {
     reportsTo: card.org?.reports_to ?? null,
     kind: card.kind,
     type: card.type,
+    ...(typeNote ? { typeNote } : {}),
     gaps,
     groups,
     steps,
@@ -231,7 +243,7 @@ const kindLabel = (kind) => (kind === "agent" ? "◆ agent" : "◇ workflow");
 export function renderCardMarkdown(v) {
   const out = [`# ${v.name}`, ""];
   if (v.sub) out.push(v.sub, "");
-  out.push([kindLabel(v.kind), v.type, v.app, v.reportsTo ? `↳ ${v.reportsTo}` : "top level"].filter(Boolean).join(" · "), "");
+  out.push([kindLabel(v.kind), v.typeNote ? `${v.type} (${v.typeNote})` : v.type, v.app, v.reportsTo ? `↳ ${v.reportsTo}` : "top level"].filter(Boolean).join(" · "), "");
   if (v.gaps.length) {
     out.push("## Not on this card", "");
     for (const g of v.gaps) out.push(`- ○ ${g.label} — ${g.text}`);
@@ -315,7 +327,7 @@ function htmlCard(v, roster) {
         .join("")}</tbody></table>`
     : "";
   return `<article class="card" id="card-${esc(v.id)}">
-<div class="top"><div class="team">${esc(team)}</div><h2>${esc(v.name)}</h2><p class="sub">${esc(v.sub)}</p><div class="tags">${kind}<span class="tag">${esc(v.type)}</span></div></div>
+<div class="top"><div class="team">${esc(team)}</div><h2>${esc(v.name)}</h2><p class="sub">${esc(v.sub)}</p><div class="tags">${kind}<span class="tag">${esc(v.type)}</span>${v.typeNote ? `<span class="tag type-note">${esc(v.typeNote)}</span>` : ""}</div></div>
 ${strip}<div class="specs"><p class="label">Specs</p>${groups}</div>
 <details class="more"><summary><span>Details · ${esc(inside)}</span><span class="chev">▸</span></summary><div class="det">${details}${sources}</div></details>
 <div class="foot"><span>Definition: ${esc(v.footer.definition)}</span><span>Evidence: ${esc(plural(v.footer.evidence, "item"))}</span></div>

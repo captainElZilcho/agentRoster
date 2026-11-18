@@ -118,3 +118,15 @@ test("CLI writes cards.html next to cards/", () => {
 test("cards are at least 360px wide so model names fit on one line", () => {
   assert.match(page(load("ok")), /minmax\(360px, 1fr\)/);
 });
+
+test("the HTML card shows the type note as text beside the type", async () => {
+  const { renderCardsPage } = await import("../skills/agentroster/scripts/render-cards.mjs");
+  const { CARD_VIEW_NS } = await import("../skills/agentroster/scripts/check-cards.mjs");
+  const base = new URL("./fixtures/cards-check/ok/", import.meta.url);
+  const roster = JSON.parse(readFileSync(new URL("roster.json", base), "utf8"));
+  const coverage = JSON.parse(readFileSync(new URL("coverage.json", base), "utf8"));
+  const c = roster.cards.find((x) => x.id === "fetcher");
+  (c.extensions[CARD_VIEW_NS] ??= {}).judgement = { type: { confidence: "medium", runner_up: "builder", why: "x" } };
+  const html = renderCardsPage(roster, coverage);
+  assert.match(html, /<span class="tag">researcher<\/span><span class="tag type-note">to confirm \(could be builder\)<\/span>/);
+});

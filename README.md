@@ -57,7 +57,8 @@ project." It follows [`skills/agentroster/SKILL.md`](skills/agentroster/SKILL.md
 folder (`.agentroster/run-YYYY-MM-DD-N/`, which must be git-ignored), runs the search script,
 reads the candidates, writes `detect.json`, `map.md` and `coverage.json`, then writes the cards
 (`roster.json`, `cards/<id>.md`, and `cards.html` to open in a browser). It never runs your
-project and never edits your files. It never opens secret files, and it checks its own output
+project and never edits your files; the one file it may write there is `agentroster.json`, your
+answers to its questions, and only after you say yes. It never opens secret files, and it checks its own output
 for secrets before it finishes, using the scripts below. Then it tells you what it found and
 what it could not see.
 
@@ -67,7 +68,8 @@ what it could not see.
 node skills/agentroster/scripts/detect.mjs tests/fixtures/detect/anthropic-sdk
 node skills/agentroster/scripts/check-map.mjs tests/fixtures/map/ok
 node skills/agentroster/scripts/redact-check.mjs tests/fixtures/map/ok
-node skills/agentroster/scripts/check-cards.mjs tests/fixtures/cards-check/ok
+node skills/agentroster/scripts/check-cards.mjs tests/fixtures/cards-check/ok --project tests/fixtures/cards-check/ok-project
+node skills/agentroster/scripts/validate-answers.mjs tests/fixtures/answers/valid/typical.json
 ```
 
 The paths above are this repo's own test fixtures. `detect.mjs` prints to the screen; add
@@ -80,9 +82,12 @@ The paths above are this repo's own test fixtures. `detect.mjs` prints to the sc
 - `redact-check.mjs <run-dir> [--project <dir>]` fails a run whose output holds secret-shaped
   text, a value from the project's `.env`, MCP or settings files, or a link. It prints where,
   never the value. Exit codes: `0` clean, `1` a leak, `2` a file can't be read.
-- `check-cards.mjs <run-dir>` checks `roster.json` against `map.md` and `coverage.json`: the same
-  agents in all three, evidence for every filled value, real field names, relative paths.
-  Exit codes: `0` ok, `1` problems (listed), `2` a file can't be read.
+- `check-cards.mjs <run-dir> --project <dir>` checks `roster.json` against `map.md` and
+  `coverage.json`: the same agents in all three, evidence for every filled value, real field
+  names, relative paths, each quote on its line, and stored answers applied (stale ones are
+  printed as `note:` lines). Exit codes: `0` ok, `1` problems (listed), `2` a file can't be read.
+- `validate-answers.mjs <agentroster.json>` checks an answers file. Exit codes: `0` ok, `1`
+  problems (listed), `2` a file can't be read.
 - `render-cards.mjs <run-dir>` writes `cards/<id>.md` and `cards.html` into the run folder (it
   writes files, so run it on a run folder, not on these fixtures). Exit codes: `0` written, `2`
   input missing or invalid.
@@ -119,7 +124,8 @@ node skills/agentroster/scripts/match-golden.mjs --only coverage expected/ run/
 
 The formats are in [`spec/findings-and-coverage-v0.1.md`](spec/findings-and-coverage-v0.1.md),
 [`spec/coverage-v0.2.md`](spec/coverage-v0.2.md) (the coverage format the map writes; the validator
-reads 0.1 and 0.2) and [`spec/roster-file-v0.1.md`](spec/roster-file-v0.1.md).
+reads 0.1 and 0.2) and [`spec/roster-file-v0.1.md`](spec/roster-file-v0.1.md). The answers file, `agentroster.json`
+(the user's answers to the skill's questions), is in [`spec/answers-file-v0.1.md`](spec/answers-file-v0.1.md).
 Exit codes for the validators (`validate-card`, `validate-findings`, `validate-coverage`): `0` all files are valid, `1` any file is invalid, `2` a file can't be read
 or isn't JSON.
 
@@ -132,9 +138,9 @@ difference. With `--only coverage` it compares only `coverage.json` (the map pha
 
 | Path | What it holds |
 |---|---|
-| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept), the findings and coverage formats (`findings-and-coverage-v0.1.md`, `coverage-v0.2.md`) and the roster file (`roster-file-v0.1.md`) |
-| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json`, `coverage-0.1.schema.json`, `coverage-0.2.schema.json` and `roster-file-0.1.schema.json` |
-| `skills/agentroster/` | The skill: `SKILL.md`, `MAP.md`, `CARDS.md`, `VALIDATION.md`, `ecosystems/` (notes and `patterns.json` for each ecosystem the search knows), `templates/` (the cards page) and `scripts/` (the three validators, `detect.mjs`, `check-map.mjs`, `redact-check.mjs`, `check-cards.mjs`, `render-cards.mjs`, `match-golden.mjs`) |
+| `spec/` | The roster card standard (versioned drafts; v0.2 is current, v0.1 kept), the findings and coverage formats (`findings-and-coverage-v0.1.md`, `coverage-v0.2.md`) the roster file (`roster-file-v0.1.md`) and the answers file (`answers-file-v0.1.md`) |
+| `schema/` | JSON Schemas: roster cards (`roster-card-0.2.schema.json`), `findings-0.1.schema.json`, `coverage-0.1.schema.json`, `coverage-0.2.schema.json`, `roster-file-0.1.schema.json` and `answers-file-0.1.schema.json` |
+| `skills/agentroster/` | The skill: `SKILL.md`, `MAP.md`, `CARDS.md`, `VALIDATION.md`, `ecosystems/` (notes and `patterns.json` for each ecosystem the search knows), `templates/` (the cards page) and `scripts/` (the four validators, `detect.mjs`, `check-map.mjs`, `redact-check.mjs`, `check-cards.mjs`, `render-cards.mjs`, `match-golden.mjs`) |
 | `examples/` | Example roster cards (`*.roster.json`), `roster.example.json`, `findings.example.json`, `coverage.example.json` and `coverage-0.2.example.json` |
 | `tests/` | Tests and synthetic fixtures (`npm test`) |
 | `package.json` | Node 20 or later; no runtime dependencies |

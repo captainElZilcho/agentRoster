@@ -1,6 +1,7 @@
 // Blocks a run that copied a secret into its output folder. It looks for secret-shaped text
 // and for values from the project's .env files. It never prints, returns or logs a matched
-// value: a hit is only a file, a line number and a kind.
+// value: a hit is only a file, a line number and a kind. With --project it also checks the
+// project's agentroster.json, the one file the skill may write there.
 // Usage: redact-check.mjs <run-dir> [--project <dir>]
 
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
@@ -379,6 +380,17 @@ export function runRedactCheckCli(args) {
       envValues = readEnvValues(project, report);
       configValues = readConfigValues(project);
       if (report.linkedEnv > 0) console.error(`not compared: ${report.linkedEnv} linked .env files`);
+      // The answers file is the one file the skill writes into a project, so it is checked too.
+      const answers = path.join(project, "agentroster.json");
+      current = answers;
+      let ast = null;
+      try {
+        ast = lstatSync(answers);
+      } catch (err) {
+        if (err.code !== "ENOENT") throw err;
+      }
+      if (ast?.isSymbolicLink()) odd.push({ path: "agentroster.json", kind: "link in the project" });
+      else if (ast) files.push({ path: "agentroster.json", text: readRunText(answers) });
     }
     const leaks = findLeaks(files, envValues, configValues);
     // A link or other odd entry could hide or point at anything, so it fails the run.
@@ -387,7 +399,7 @@ export function runRedactCheckCli(args) {
     if (odd.length > 0) console.log(`blocked: ${odd.length}`);
     if (leaks.length > 0) console.log(`leaks: ${leaks.length}`);
     if (odd.length + leaks.length > 0) return 1;
-    console.log(`clean: ${names.length} files`);
+    console.log(`clean: ${files.length} files`);
     return 0;
   } catch (err) {
     if (err instanceof CliError) console.error(err.message);

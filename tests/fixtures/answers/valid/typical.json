@@ -1,0 +1,28 @@
+{
+  "agentroster": "0.1",
+  "answers": [
+    {
+      "card": "responder",
+      "field": "type",
+      "value": "assistant",
+      "date": "2026-11-18",
+      "based_on": {
+        "file": "crew_desk/main.py",
+        "line": 13,
+        "quote": "print(result.raw)"
+      }
+    },
+    {
+      "card": "triage",
+      "field": "type",
+      "value": "researcher",
+      "reason": "It only looks things up; it writes nothing.",
+      "date": "2026-11-18",
+      "based_on": {
+        "file": "crew_desk/crew.py",
+        "line": 14,
+        "quote": "goal=\"Sort each ticket by category and urgency\""
+      }
+    }
+  ]
+}

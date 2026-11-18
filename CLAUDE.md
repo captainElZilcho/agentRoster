@@ -57,8 +57,8 @@ project names, secrets or the maintainer's notes? Then it is internal and goes i
 | Kind of file | Location | Public |
 |---|---|---|
 | Card standard (versioned drafts) | `spec/roster-card-standard-vX.Y.md` | yes |
-| Run file formats (versioned drafts) | `spec/findings-and-coverage-vX.Y.md`, `spec/coverage-vX.Y.md`, `spec/roster-file-vX.Y.md` | yes |
-| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json`, `schema/coverage-X.Y.schema.json` (0.1 and 0.2), `schema/roster-file-X.Y.schema.json` | yes |
+| Run file formats (versioned drafts) | `spec/findings-and-coverage-vX.Y.md`, `spec/coverage-vX.Y.md`, `spec/roster-file-vX.Y.md`, `spec/answers-file-vX.Y.md` | yes |
+| JSON Schemas | `schema/roster-card-X.Y.schema.json`, `schema/findings-X.Y.schema.json`, `schema/coverage-X.Y.schema.json` (0.1 and 0.2), `schema/roster-file-X.Y.schema.json`, `schema/answers-file-X.Y.schema.json` | yes |
 | Example roster cards | `examples/*.roster.json` (generic agents only) | yes |
 | Product design, step designs and research | `.local/docs/` (`product-vX.Y.md`, `design-stepN-<topic>.md`, `research.md`) | no (internal) |
 | Decisions | `.local/docs/decisions.md` (new ADR, never delete) | no (internal) |
@@ -82,7 +82,8 @@ and put the detail in `CLAUDE.local.md` or `.local/`.
 - **Reuse before inventing.** Where A2A, Agent Skills, MCP or Claude Code already define a field,
   map to it (spec section 10). New core fields only come with a new standard version; anything
   else goes under namespaced `extensions`.
-- **Discovery is read-only.** Never run discovered agents, never edit their files, never copy
+- **Discovery is read-only.** The one exception is `agentroster.json` at the project root (the
+  user's answers), written only after the user says yes. Never run discovered agents, never edit their files, never copy
   secrets, tokens or `.env` values into cards, reports or test fixtures. Redact them.
 - **Nothing invented.** A field the source doesn't have is `null`. A rating without evidence is
   `unrated`.

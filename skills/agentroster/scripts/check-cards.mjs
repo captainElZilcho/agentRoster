@@ -1,7 +1,8 @@
 // Checks a run's cards against its map and coverage: the same ids in all three,
 // evidence for every filled value, evidence keys that name real fields, relative
 // evidence paths, unknown fields left empty, and workflow steps that report to the
-// workflow; with the project, that every quote is on the line it cites.
+// workflow; with the project, that every quote is on the line it cites, and, when the project
+// has an agentroster.json, that each stored answer is on its card (stale answers are noted).
 // Usage: check-cards.mjs <run-dir> --project <dir>
 
 import { readFileSync, statSync } from "node:fs";
@@ -11,6 +12,18 @@ import { canonicalJson, compareText } from "./lib/order.mjs";
 import { validateRosterFile } from "./validate-card.mjs";
 import { validateCoverage } from "./validate-coverage.mjs";
 import { inventoryIds } from "./check-map.mjs";
+import { validateAnswers } from "./validate-answers.mjs";
+
+const TYPE_CODES = JSON.parse(
+  readFileSync(new URL("../schema/roster-card-0.2.schema.json", import.meta.url), "utf8"),
+).$defs.type.enum;
+const CONFIDENCE = ["high", "medium", "low"];
+const ANSWERS_FILE = "agentroster.json";
+
+/** Is the card's type set by a person: a hand card or the answers file? */
+const typeByHand = (card) => (card.evidence?.type ?? []).some((i) => i?.found_by === "hand");
+/** Is it set by a hand card (not the answers file)? A hand card wins over an answer. */
+const typeByHandCard = (card) => (card.evidence?.type ?? []).some((i) => i?.found_by === "hand" && i.file !== ANSWERS_FILE);
 
 /** The extension that holds data the card view needs and the core has no field for. */
 export const CARD_VIEW_NS = "io.github.captainelzilcho.agentroster.card-view/v1";
@@ -100,12 +113,13 @@ function checkCard(card, byId, unknowns, errors) {
   if (ext && typeof ext === "object") {
     const extEvidence = ext.evidence && typeof ext.evidence === "object" ? ext.evidence : {};
     for (const [field, value] of Object.entries(ext)) {
-      if (field === "evidence" || field === "stated_only") continue;
+      if (field === "evidence" || field === "stated_only" || field === "judgement") continue;
       if (isFilled(value) && !isFilled(extEvidence[field])) {
         errors.push(`card "${id}": extensions.${CARD_VIEW_NS}.${field} is filled but has no evidence`);
       }
     }
     checkEvidenceItems(id, extEvidence, errors);
+    if (ext.judgement !== undefined) checkJudgement(card, ext.judgement, errors);
     if (card.kind === "agent") {
       for (const field of ["steps", "plain_steps"]) {
         if (isFilled(ext[field])) errors.push(`card "${id}": extensions.${CARD_VIEW_NS}.${field} is for workflows only`);
@@ -126,6 +140,22 @@ function checkCard(card, byId, unknowns, errors) {
       }
     }
   }
+}
+
+function checkJudgement(card, judgement, errors) {
+  const at = `card "${card.id}": extensions.${CARD_VIEW_NS}.judgement`;
+  const keys = judgement && typeof judgement === "object" ? Object.keys(judgement) : [""];
+  if (keys.some((k) => k !== "type")) return errors.push(`${at} may only hold "type"`);
+  const j = judgement.type;
+  if (j === undefined) return;
+  if (typeByHand(card)) return errors.push(`card "${card.id}": judgement.type is for the scan's own pick; a person decided this type`);
+  if (!CONFIDENCE.includes(j?.confidence)) errors.push(`${at}.type.confidence must be high, medium or low`);
+  if (j?.confidence === "high") {
+    if (j.runner_up !== null) errors.push(`${at}.type.runner_up must be null when confidence is high`);
+  } else if (!TYPE_CODES.includes(j?.runner_up) || j.runner_up === card.type) {
+    errors.push(`${at}.type.runner_up must be another type code`);
+  }
+  if (typeof j?.why !== "string" || j.why.trim() === "") errors.push(`${at}.type.why must say why`);
 }
 
 /**
@@ -221,6 +251,61 @@ export function checkQuotes(roster, coverage, readFile) {
   return { valid: sorted.length === 0, errors: sorted };
 }
 
+/**
+ * Check that each stored answer is on its card: the type as written, with the answers file's
+ * line that holds its "value" as the first type evidence (found_by "hand"). The file may be laid
+ * out any way; checkQuotes proves the quote is on the cited line. A card whose type comes from a
+ * hand card is skipped (the hand card wins); an answer for a card not in the roster is left to
+ * staleAnswers.
+ * @param {object} roster A valid roster file.
+ * @param {object} answers A valid answers file.
+ * @param {string} answersText The answers file's text.
+ * @returns {{errors: string[]}}
+ */
+export function checkAnswers(roster, answers, answersText) {
+  const errors = [];
+  const lines = String(answersText).replace(/^\uFEFF/, "").split(/\r?\n/);
+  const byId = new Map((roster.cards ?? []).map((c) => [c.id, c]));
+  for (const a of answers.answers) {
+    const card = byId.get(a.card);
+    if (!card || typeByHandCard(card)) continue;
+    if (card.type !== a.value) errors.push(`card "${a.card}": type is "${card.type}" but ${ANSWERS_FILE} says "${a.value}"`);
+    const first = card.evidence?.type?.[0];
+    const cited = Number.isInteger(first?.line) ? lines[first.line - 1] : undefined;
+    const holdsValue = cited !== undefined && new RegExp(`"value"\\s*:\\s*"${a.value}"`).test(cited);
+    if (first?.file !== ANSWERS_FILE || first?.found_by !== "hand" || !holdsValue) {
+      errors.push(`card "${a.card}": type evidence must start with the ${ANSWERS_FILE} line that holds its "value"`);
+    }
+  }
+  return { errors };
+}
+
+/**
+ * List stored answers that may no longer fit: their card is gone, or the line the pick was based
+ * on is no longer anywhere in its file. Stale answers still apply; this only reports them.
+ * @param {object} roster A valid roster file.
+ * @param {object} answers A valid answers file.
+ * @param {(file: string) => string|null} readFile Reads a project file by its relative path; null if missing.
+ * @returns {string[]}
+ */
+export function staleAnswers(roster, answers, readFile) {
+  const ids = new Set((roster.cards ?? []).map((c) => c.id));
+  const out = [];
+  for (const a of answers.answers) {
+    const at = `answer "${a.card}" ${a.field}`;
+    if (!ids.has(a.card)) {
+      out.push(`${at}: no such card any more`);
+      continue;
+    }
+    if (!a.based_on) continue;
+    const text = goodPath(a.based_on.file) ? readFile(a.based_on.file) : null;
+    if (text === null || !text.split(/\r?\n/).some((l) => quoteOnLine(a.based_on.quote, l))) {
+      out.push(`${at}: the code behind this answer changed`);
+    }
+  }
+  return out;
+}
+
 // Command line
 
 const USAGE = "usage: check-cards.mjs <run-dir> --project <dir>";
@@ -278,9 +363,25 @@ export function runCheckCardsCli(args) {
       }
     };
     const errors = [...checkCards(roster, coverage, mapText).errors, ...checkQuotes(roster, coverage, readFile).errors];
+    const answersText = readFile(ANSWERS_FILE);
+    let notes = [];
+    if (answersText !== null) {
+      let answers;
+      try {
+        answers = JSON.parse(answersText.replace(/^\uFEFF/, ""));
+      } catch {
+        answers = null;
+      }
+      if (answers === null || !validateAnswers(answers).valid) {
+        throw new CliError(`invalid ${ANSWERS_FILE}: run validate-answers.mjs for details`);
+      }
+      errors.push(...checkAnswers(roster, answers, answersText).errors);
+      notes = staleAnswers(roster, answers, readFile);
+    }
     const result = { valid: errors.length === 0, errors: [...new Set(errors)].sort(compareText) };
     if (result.valid) {
       console.log(`ok ${dir}`);
+      for (const n of notes) console.log(`note: ${n}`);
       return 0;
     }
     for (const e of result.errors) console.log(e);

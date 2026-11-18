@@ -4,7 +4,7 @@ import { readFileSync, mkdtempSync, writeFileSync, cpSync, rmSync } from "node:f
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { checkCards, checkQuotes, CARD_VIEW_NS } from "../skills/agentroster/scripts/check-cards.mjs";
+import { checkCards, checkQuotes, checkAnswers, staleAnswers, CARD_VIEW_NS } from "../skills/agentroster/scripts/check-cards.mjs";
 import { inventoryIds } from "../skills/agentroster/scripts/check-map.mjs";
 
 const dir = (name) => new URL(`./fixtures/cards-check/${name}/`, import.meta.url);
@@ -301,4 +301,177 @@ test("roster.json's snapshot must equal coverage.json's", () => {
   const f = load("ok");
   f.roster.snapshot = { ...f.roster.snapshot, taken_at: "2026-11-08T01:00:00Z" };
   has(run(f), "roster.json's snapshot differs from coverage.json's: copy it from coverage.json");
+});
+
+// The answers file (agentroster.json)
+
+const answersDoc = (...answers) => ({ agentroster: "0.1", answers });
+const answer = (card, value, extra = {}) => ({ card, field: "type", value, date: "2026-11-18", ...extra });
+const answersText = (doc) => JSON.stringify(doc, null, 2) + "\n";
+const valueLine = (text, n = 0) =>
+  text.split("\n").map((l, i) => [l, i + 1]).filter(([l]) => l.includes('"value"'))[n];
+const applyAnswer = (c, text, n = 0) => {
+  const [quote, line] = valueLine(text, n);
+  c.evidence.type = [{ file: "agentroster.json", line, quote: quote.trim(), found_by: "hand" }];
+};
+
+test("checkAnswers: an applied answer passes", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("fetcher", "researcher"));
+  const text = answersText(doc);
+  applyAnswer(card(f, "fetcher"), text);
+  assert.deepEqual(checkAnswers(f.roster, doc, text).errors, []);
+});
+
+test("checkAnswers: a type that differs from the answer is reported", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("fetcher", "builder"));
+  const text = answersText(doc);
+  applyAnswer(card(f, "fetcher"), text);
+  assert.ok(checkAnswers(f.roster, doc, text).errors.includes('card "fetcher": type is "researcher" but agentroster.json says "builder"'));
+});
+
+test("checkAnswers: type evidence must start with the answer's value line", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("fetcher", "researcher"));
+  const text = answersText(doc);
+  const [, line] = valueLine(text);
+  assert.ok(line > 0);
+  assert.ok(checkAnswers(f.roster, doc, text).errors.includes('card "fetcher": type evidence must start with the agentroster.json line that holds its "value"'));
+});
+
+test("checkAnswers: a hand card's type wins over an answer", () => {
+  const f = load("ok");
+  card(f, "fetcher").evidence.type = [{ file: "app/fetcher.roster.json", line: 7, quote: '"type": "researcher",', found_by: "hand" }];
+  const doc = answersDoc(answer("fetcher", "builder"));
+  assert.deepEqual(checkAnswers(f.roster, doc, answersText(doc)).errors, []);
+});
+
+test("checkAnswers: an answer for a card not in the roster is not an error", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("ghost", "builder"));
+  assert.deepEqual(checkAnswers(f.roster, doc, answersText(doc)).errors, []);
+});
+
+test("staleAnswers: a card that is gone, a file that is gone, and a quote that is gone", () => {
+  const f = load("ok");
+  const doc = answersDoc(
+    answer("fetcher", "researcher", { based_on: { file: "app/fetcher.py", line: 1, quote: "a line nobody wrote" } }),
+    answer("ghost", "builder"),
+    answer("daily-digest", "orchestrator", { based_on: { file: "app/gone.py", line: 3, quote: "x" } }),
+  );
+  assert.deepEqual(staleAnswers(f.roster, doc, readProject).sort(), [
+    'answer "daily-digest" type: the code behind this answer changed',
+    'answer "fetcher" type: the code behind this answer changed',
+    'answer "ghost" type: no such card any more',
+  ]);
+});
+
+test("staleAnswers: a quote still in the file, on any line, with [redacted] pieces, is not stale", () => {
+  const f = load("ok");
+  const doc = answersDoc(
+    answer("daily-digest", "orchestrator"),
+    answer("fetcher", "researcher", { based_on: { file: "app/fetcher.py", line: 99, quote: 'MODEL = "[redacted]"' } }),
+  );
+  assert.deepEqual(staleAnswers(f.roster, doc, readProject), []);
+});
+
+test("judgement: a well-formed entry passes and needs no evidence", () => {
+  const f = load("ok");
+  (card(f, "fetcher").extensions[CARD_VIEW_NS] ??= {}).judgement = {
+    type: { confidence: "medium", runner_up: "builder", why: "It writes a list for the digest (app/fetcher.py:1)." },
+  };
+  assert.deepEqual(run(f), { valid: true, errors: [] });
+});
+
+test("judgement: a malformed entry is reported", () => {
+  const ns = `extensions.${CARD_VIEW_NS}.judgement`;
+  const cases = [
+    [{ kind: { confidence: "high", runner_up: null, why: "x" } }, `card "fetcher": ${ns} may only hold "type"`],
+    [{ type: { confidence: "sure", runner_up: "builder", why: "x" } }, `card "fetcher": ${ns}.type.confidence must be high, medium or low`],
+    [{ type: { confidence: "medium", runner_up: "researcher", why: "x" } }, `card "fetcher": ${ns}.type.runner_up must be another type code`],
+    [{ type: { confidence: "medium", runner_up: null, why: "x" } }, `card "fetcher": ${ns}.type.runner_up must be another type code`],
+    [{ type: { confidence: "high", runner_up: "builder", why: "x" } }, `card "fetcher": ${ns}.type.runner_up must be null when confidence is high`],
+    [{ type: { confidence: "low", runner_up: "builder", why: "" } }, `card "fetcher": ${ns}.type.why must say why`],
+  ];
+  for (const [judgement, message] of cases) {
+    const f = load("ok");
+    (card(f, "fetcher").extensions[CARD_VIEW_NS] ??= {}).judgement = judgement;
+    has(run(f), message);
+  }
+});
+
+test("judgement: a type a person decided has no judgement", () => {
+  const f = load("ok");
+  const c = card(f, "fetcher");
+  c.evidence.type = [{ file: "agentroster.json", line: 6, quote: '"value": "researcher",', found_by: "hand" }];
+  (c.extensions[CARD_VIEW_NS] ??= {}).judgement = { type: { confidence: "low", runner_up: "builder", why: "x" } };
+  has(run(f), 'card "fetcher": judgement.type is for the scan\'s own pick; a person decided this type');
+});
+
+function withAnswersProject(doc, fn, { applyTo } = {}) {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const runDir = path.join(tmp, "run");
+    const project = path.join(tmp, "project");
+    cpSync(dir("ok").pathname, runDir, { recursive: true });
+    cpSync(PROJECT, project, { recursive: true });
+    const text = typeof doc === "string" ? doc : answersText(doc);
+    writeFileSync(path.join(project, "agentroster.json"), text);
+    if (applyTo) {
+      const p = path.join(runDir, "roster.json");
+      const roster = JSON.parse(readFileSync(p, "utf8"));
+      applyAnswer(roster.cards.find((c) => c.id === applyTo), text);
+      writeFileSync(p, JSON.stringify(roster, null, 2));
+    }
+    return fn(runDir, project);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+test("CLI: with an answers file, ok is followed by a note per stale answer", () => {
+  const doc = answersDoc(answer("fetcher", "researcher"), answer("ghost", "builder"));
+  withAnswersProject(doc, (runDir, project) => {
+    const r = cli([runDir, "--project", project]);
+    assert.equal(r.code, 0, r.out + r.err);
+    assert.match(r.out, /^ok /);
+    assert.match(r.out, /\nnote: answer "ghost" type: no such card any more\n/);
+  }, { applyTo: "fetcher" });
+});
+
+test("CLI: an answer not applied exits 1", () => {
+  withAnswersProject(answersDoc(answer("fetcher", "builder")), (runDir, project) => {
+    const r = cli([runDir, "--project", project]);
+    assert.equal(r.code, 1);
+    assert.match(r.out, /card "fetcher": type is "researcher" but agentroster\.json says "builder"/);
+  });
+});
+
+test("CLI: an invalid or unreadable answers file exits 2 in plain words", () => {
+  for (const bad of ['{"agentroster": "9"}', "{ not json"]) {
+    withAnswersProject(bad, (runDir, project) => {
+      const r = cli([runDir, "--project", project]);
+      assert.equal(r.code, 2);
+      assert.equal(r.err.trim(), "invalid agentroster.json: run validate-answers.mjs for details");
+    });
+  }
+});
+
+test("checkAnswers: a valid answer written on one line passes", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("daily-digest", "orchestrator"), answer("fetcher", "researcher"));
+  const text = '{"agentroster": "0.1", "answers": [\n' +
+    '{"card": "daily-digest", "field": "type", "value": "orchestrator", "date": "2026-11-18"},\n' +
+    '{"card": "fetcher", "field": "type", "value": "researcher", "date": "2026-11-18"}\n]}\n';
+  card(f, "daily-digest").evidence.type = [{ file: "agentroster.json", line: 2, quote: '"value": "orchestrator"', found_by: "hand" }];
+  card(f, "fetcher").evidence.type = [{ file: "agentroster.json", line: 3, quote: '"value": "researcher"', found_by: "hand" }];
+  assert.deepEqual(checkAnswers(f.roster, doc, text).errors, []);
+});
+
+test("checkAnswers: type evidence citing a line without the answer's value is reported", () => {
+  const f = load("ok");
+  const doc = answersDoc(answer("fetcher", "researcher"));
+  card(f, "fetcher").evidence.type = [{ file: "agentroster.json", line: 2, quote: '"agentroster": "0.1",', found_by: "hand" }];
+  assert.ok(checkAnswers(f.roster, doc, answersText(doc)).errors.includes('card "fetcher": type evidence must start with the agentroster.json line that holds its "value"'));
 });
