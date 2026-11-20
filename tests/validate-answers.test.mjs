@@ -96,3 +96,38 @@ test("an empty based_on quote is an error", () => {
   d.answers[0].based_on.quote = "";
   fails(d, "/answers/0/based_on/quote", /.+/);
 });
+
+test("the CLI refuses a linked file and never reads its target", async () => {
+  const { mkdtempSync, writeFileSync, symlinkSync, rmSync } = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const secret = path.join(dir, "secret.txt");
+    writeFileSync(secret, "FAKE-TOKEN-1234\n");
+    const link = path.join(dir, "agentroster.json");
+    symlinkSync(secret, link);
+    const r = spawnSync(process.execPath, [script, link], { encoding: "utf8" });
+    assert.equal(r.status, 2);
+    assert.equal(r.stderr, `cannot read ${link}: is a link\n`);
+    assert.ok(!(r.stdout + r.stderr).includes("FAKE-TOKEN"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a file that is not JSON is reported without quoting its text", async () => {
+  const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const f = path.join(dir, "agentroster.json");
+    writeFileSync(f, "FAKE-TOKEN-1234\n");
+    const r = spawnSync(process.execPath, [script, f], { encoding: "utf8" });
+    assert.equal(r.status, 2);
+    assert.equal(r.stderr, `not valid JSON: ${f}\n`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

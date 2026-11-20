@@ -234,9 +234,13 @@ export function cardView(card, roster, unknowns = []) {
 
 // Markdown
 
-const mdCell = (s) => String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+// Card text comes from the scanned project and the model: keep it plain text in Markdown (one line,
+// no HTML, no link or image syntax). Quotes go in code spans, where only | and line breaks matter.
+const mdText = (s) => String(s).replace(/\r?\n/g, " ").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/[[\]]/g, "\\$&");
+const mdCell = (s) => mdText(s).replace(/\|/g, "\\|");
 function mdCode(s) {
-  const text = mdCell(s);
+  const text = String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
   if (text === "") return "";
   return text.includes("`") ? `\`\` ${text} \`\`` : `\`${text}\``;
 }
@@ -244,31 +248,32 @@ const kindLabel = (kind) => (kind === "agent" ? "◆ agent" : "◇ workflow");
 
 /** @param {ReturnType<typeof cardView>} v */
 export function renderCardMarkdown(v) {
-  const out = [`# ${v.name}`, ""];
-  if (v.sub) out.push(v.sub, "");
-  out.push([kindLabel(v.kind), v.typeNote ? `${v.type} (${v.typeNote})` : v.type, v.app, v.reportsTo ? `↳ ${v.reportsTo}` : "top level"].filter(Boolean).join(" · "), "");
+  const out = [`# ${mdText(v.name)}`, ""];
+  if (v.sub) out.push(mdText(v.sub).replace(/^#/, "\\#"), "");
+  out.push([kindLabel(v.kind), v.typeNote ? `${v.type} (${v.typeNote})` : v.type, v.app && mdText(v.app), v.reportsTo ? `↳ ${mdText(v.reportsTo)}` : "top level"].filter(Boolean).join(" · "), "");
   if (v.gaps.length) {
     out.push("## Not on this card", "");
-    for (const g of v.gaps) out.push(`- ○ ${g.label} — ${g.text}`);
+    for (const g of v.gaps) out.push(`- ○ ${mdText(g.label)} — ${mdText(g.text)}`);
     out.push("");
   }
   out.push("## Specs", "");
   const group = (g) => {
     out.push(`### ${g.title}`, "");
-    for (const t of g.tiles) out.push(`- ${t.label}: ${t.value}${t.marker ? ` (${t.marker})` : ""}`);
+    for (const t of g.tiles) out.push(`- ${mdText(t.label)}: ${mdText(t.value)}${t.marker ? ` (${t.marker})` : ""}`);
     out.push("");
   };
   group(v.groups[0]);
   if (v.steps) {
     out.push("### Steps", "");
-    out.push(v.steps.known ? `- Order: ${v.steps.order.join(", ")}` : `- Order not known: ${v.steps.order.join(", ")}`);
+    const order = mdText(v.steps.order.join(", "));
+    out.push(v.steps.known ? `- Order: ${order}` : `- Order not known: ${order}`);
     out.push(`- With a model: ${v.steps.withModel}${v.steps.plain === null ? "" : ` · plain code: ${v.steps.plain}`}`);
-    if (v.steps.starts.length) out.push(`- Starts: ${v.steps.starts.join(" · ")}`);
+    if (v.steps.starts.length) out.push(`- Starts: ${mdText(v.steps.starts.join(" · "))}`);
     out.push("");
   }
   for (const g of v.groups.slice(1)) group(g);
   out.push("## Details", "");
-  for (const d of v.details) out.push(`- ${d.label}: ${d.value}`);
+  for (const d of v.details) out.push(`- ${mdText(d.label)}: ${mdText(d.value)}`);
   out.push("");
   if (v.sources.length) {
     out.push("## Sources", "", "| Field | Value | Where | Quote | From |", "|---|---|---|---|---|");

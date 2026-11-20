@@ -1,7 +1,25 @@
 // Shared command-line loop for the validators: read each file, run the
 // validator, print the result, and return the exit code.
 
-import { readFileSync, realpathSync } from "node:fs";
+import { closeSync, constants, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
+
+/**
+ * Read a file only if it is a regular file, never through a link. The file may come from a
+ * scanned project (agentroster.json), so a link could point anywhere.
+ * @param {string} file
+ * @returns {string}
+ */
+function readRegularFile(file) {
+  const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const st = fstatSync(fd);
+    if (st.isDirectory()) throw Object.assign(new Error("is a folder"), { code: "EISDIR" });
+    if (!st.isFile()) throw Object.assign(new Error("not a regular file"), { code: "not a regular file" });
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
 import { pathToFileURL } from "node:url";
 import { formatErrors } from "./schema-check.mjs";
 
@@ -21,9 +39,9 @@ export function runValidatorCli(files, validate, usage) {
   for (const file of files) {
     let text;
     try {
-      text = readFileSync(file, "utf8");
+      text = readRegularFile(file);
     } catch (err) {
-      console.error(`cannot read ${file}: ${err.code ?? err.message}`);
+      console.error(`cannot read ${file}: ${err.code === "ELOOP" ? "is a link" : err.code ?? err.message}`);
       code = 2;
       continue;
     }
@@ -31,7 +49,7 @@ export function runValidatorCli(files, validate, usage) {
     try {
       doc = JSON.parse(text.replace(/^\uFEFF/, ""));
     } catch (err) {
-      console.error(`not valid JSON: ${file} (${err.message})`);
+      console.error(`not valid JSON: ${file}`); // the parser message can quote the file's text
       code = 2;
       continue;
     }

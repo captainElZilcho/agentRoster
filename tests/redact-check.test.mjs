@@ -517,3 +517,25 @@ test("CLI: a linked agentroster.json is blocked, never read", () => {
   assert.equal(r.status, 1);
   assert.match(r.stdout, /blocked: agentroster\.json \(link in the project\)/);
 });
+
+test("a .env or config value with a quote or backslash is found in its JSON-escaped form", () => {
+  for (const v of ['FAKE\\pass-word-1', 'FAKE"quote-pass-1']) {
+    const line = `{"quote": ${JSON.stringify(`pw = ${v}`)}}`;
+    assert.ok(!line.includes(v), "the raw value is not in the JSON line");
+    const files = [{ path: "roster.json", text: line + "\n" }];
+    assert.deepEqual(findLeaks(files, [v]).map((l) => l.kind), ["value from .env"]);
+    assert.deepEqual(findLeaks(files, [], [v]).map((l) => l.kind), ["value from config"]);
+  }
+});
+
+test("secrets in an MCP server's url field are collected (query token and user:password)", () => {
+  const project = tmp();
+  put(project, ".mcp.json", JSON.stringify({ mcpServers: {
+    a: { type: "http", url: "https://mcp.example.test/sse?token=FAKE-url-token-9" },
+    b: { type: "sse", url: "https://user:FAKE-pw-123456@mcp.example.test/x" },
+  } }));
+  const values = readConfigValues(project);
+  assert.ok(values.includes("FAKE-url-token-9"), "query token");
+  assert.ok(values.includes("FAKE-pw-123456"), "password");
+  assert.ok(!values.includes("mcp.example.test"), "no path words");
+});

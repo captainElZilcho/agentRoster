@@ -41,8 +41,13 @@ function decodeLine(line) {
  * @returns {Array<{file: string, line: number, kind: "secret-shaped" | "value from .env" | "value from config"}>}
  */
 export function findLeaks(files, envValues, configValues = []) {
-  const values = [...new Set(envValues)].filter((v) => v.length >= MIN_ENV_LENGTH);
-  const configs = [...new Set(configValues)].filter((v) => v.length >= MIN_ENV_LENGTH);
+  // Run files are JSON too, where a quote or backslash in a value is escaped: look for both forms.
+  const withEscaped = (list) => {
+    const kept = list.filter((v) => v.length >= MIN_ENV_LENGTH);
+    return [...new Set(kept.flatMap((v) => [v, JSON.stringify(v).slice(1, -1)]))];
+  };
+  const values = withEscaped(envValues);
+  const configs = withEscaped(configValues);
   const leaks = [];
   for (const file of files) {
     file.text.replace(/^﻿/, "").split(/\r?\n/).forEach((raw, i) => {
@@ -284,10 +289,14 @@ function collectArgs(args, out) {
   });
 }
 
-/** Collect strings found under "env" or "headers" objects, at any depth. */
+/** Collect strings found under "env" or "headers" objects, at any depth, and the secrets in any
+ * URL (a remote server's "url" carries its token in the query or as user:password). */
 function collectConfig(node, inside, out, inArgs = false) {
   if (typeof node === "string") {
-    if (!inside) return;
+    if (!inside) {
+      if (BARE_URL.test(node)) collectUrl(node, out);
+      return;
+    }
     out.add(node);
     const space = node.indexOf(" ");
     if (space !== -1) out.add(node.slice(space + 1).trim());

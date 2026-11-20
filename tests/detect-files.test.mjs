@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { listFiles } from "../skills/agentroster/scripts/detect.mjs";
+import { listFiles, gitInvocation, isSafeListedPath } from "../skills/agentroster/scripts/detect.mjs";
 
 let gitOk = true;
 try {
@@ -289,4 +289,22 @@ test("git repo: a nested repository that is not a submodule is counted as submod
     assert.deepEqual(r.files, ["a.py"]);
     assert.equal(r.skipped.submodule, 1);
   } finally { cleanup(root); }
+});
+
+test("git runs with every transport blocked, so a project's config cannot start a fetch", () => {
+  const { args, env } = gitInvocation("/proj", ["ls-files"]);
+  const configs = args.flatMap((a, i) => (args[i - 1] === "-c" ? [a] : []));
+  assert.ok(configs.includes("protocol.allow=never"), "protocol.allow=never");
+  assert.ok(configs.includes("core.hooksPath=/dev/null"));
+  assert.ok(configs.includes("core.fsmonitor=false"));
+  assert.equal(env.GIT_NO_LAZY_FETCH, "1");
+  assert.equal(env.GIT_CONFIG_NOSYSTEM, "1");
+  assert.equal(args[args.indexOf("-C") + 1], "/proj");
+});
+
+test("a path from git ls-files must stay inside the project", () => {
+  for (const ok of ["app.py", "src/agent.py", "a/b/c.ts", "nested/"]) assert.equal(isSafeListedPath(ok), true, ok);
+  for (const bad of ["../outside/app.py", "src/../../x.py", "./app.py", "a//b.py", "/etc/passwd", "a/./b.py", "", "/", "a//"]) {
+    assert.equal(isSafeListedPath(bad), false, bad);
+  }
 });

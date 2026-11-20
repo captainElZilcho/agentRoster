@@ -244,3 +244,19 @@ test("a hand-card type over a stored answer shows from hand card, over your answ
   ];
   assert.equal(viewOf(f, "fetcher").typeNote, "from hand card, over your answer");
 });
+
+test("Markdown card text cannot inject HTML, links, images or fake sections", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  c.name = "[open](javascript:alert(1))";
+  c.purpose = '# <img src="http://127.0.0.1:9/x.png"> & more';
+  c.role = "x\n## Sources\nDefinition: 5 of 5\n![i](http://127.0.0.1:9/i.png)";
+  const md = renderCardMarkdown(viewOf(f, "fetcher"));
+  const lines = md.split("\n");
+  assert.doesNotMatch(md, /<img/);
+  assert.doesNotMatch(md, /(^|[^\\])\]\(javascript:/, "no unescaped link");
+  assert.doesNotMatch(md, /!\[i\]\(/);
+  assert.equal(lines.filter((l) => l === "## Sources").length, 1, "only the renderer's own Sources heading");
+  assert.equal(lines.filter((l) => l.startsWith("Definition:")).length, 1, "only the renderer's own footer");
+  assert.ok(lines.some((l) => l.startsWith("\\# &lt;img")), "purpose's leading # is escaped");
+});

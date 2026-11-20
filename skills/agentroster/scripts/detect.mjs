@@ -67,12 +67,27 @@ function isSecretName(name) {
 /** Folder names whose contents are secret. */
 const SECRET_DIRS = new Set([".ssh"]);
 
-/** Environment for git: no caller GIT_* variables, no system config. */
-function gitEnv() {
+/**
+ * How git is run on a project: no caller GIT_* variables, no system config, and no way for the
+ * project's own config to run a command (hooks, fsmonitor) or start a fetch (every transport is
+ * blocked, which also stops a partial clone's lazy fetch).
+ * @param {string} root
+ * @param {string[]} args
+ * @returns {{args: string[], env: Record<string, string>}}
+ */
+export function gitInvocation(root, args) {
   const env = { ...process.env };
   for (const k of Object.keys(env)) if (k.startsWith("GIT_")) delete env[k];
   env.GIT_CONFIG_NOSYSTEM = "1";
-  return env;
+  env.GIT_NO_LAZY_FETCH = "1"; // git 2.44+; older git ignores it, protocol.allow=never still holds
+  return {
+    args: [
+      "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-c", "core.hooksPath=/dev/null",
+      "-c", "protocol.allow=never",
+      "-C", root, ...args,
+    ],
+    env,
+  };
 }
 
 /**
@@ -82,18 +97,28 @@ function gitEnv() {
  * @returns {string|null}
  */
 function git(root, args) {
+  const inv = gitInvocation(root, args);
   try {
-    return execFileSync("git", [
-      "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-c", "core.hooksPath=/dev/null",
-      "-C", root, ...args,
-    ], {
+    return execFileSync("git", inv.args, {
       stdio: ["ignore", "pipe", "ignore"],
-      env: gitEnv(),
+      env: inv.env,
       maxBuffer: 256 * 1024 * 1024,
     }).toString("utf8");
   } catch {
     return null;
   }
+}
+
+/**
+ * Is a path printed by git a plain relative path inside the project? A crafted index could list
+ * "../x" or "/x"; such a path is never read.
+ * @param {string} p
+ * @returns {boolean}
+ */
+export function isSafeListedPath(p) {
+  if (p === "" || p.startsWith("/") || p.includes("\\")) return false;
+  const q = p.endsWith("/") ? p.slice(0, -1) : p; // git ends a folder entry with one "/"
+  return q !== "" && q.split("/").every((s) => s !== "" && s !== "." && s !== "..");
 }
 
 /**
@@ -150,6 +175,7 @@ export function listFiles(root) {
     if (listed !== null && ignored !== null) {
       skipped.ignored = split(ignored).filter((p) => !p.split("/").includes(".git")).length;
       for (const p of new Set(split(listed))) {
+        if (!isSafeListedPath(p)) { skipped.link++; continue; } // would lead outside root
         const segs = p.split("/");
         if (segs.includes(".git")) continue;
         const why = segs.slice(0, -1)
