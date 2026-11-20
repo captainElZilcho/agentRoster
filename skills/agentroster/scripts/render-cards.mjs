@@ -235,14 +235,19 @@ export function cardView(card, roster, unknowns = []) {
 // Markdown
 
 // Card text comes from the scanned project and the model: keep it plain text in Markdown (one line,
-// no HTML, no link or image syntax). Quotes go in code spans, where only | and line breaks matter.
-const mdText = (s) => String(s).replace(/\r?\n/g, " ").replace(/&/g, "&amp;").replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;").replace(/[[\]]/g, "\\$&");
+// no HTML, no link or image syntax). Backslashes first, or "\[" would turn into a live "\\[".
+// Quotes go in code spans, where only | and line breaks matter.
+const mdText = (s) => String(s).replace(/\\/g, "\\\\").replace(/\r?\n/g, " ").replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[[\]]/g, "\\$&");
 const mdCell = (s) => mdText(s).replace(/\|/g, "\\|");
 function mdCode(s) {
   const text = String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
   if (text === "") return "";
-  return text.includes("`") ? `\`\` ${text} \`\`` : `\`${text}\``;
+  // The fence must be longer than any backtick run inside, or the text closes the span early.
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((r) => r.length));
+  if (longest === 0) return `\`${text}\``;
+  const fence = "`".repeat(longest + 1);
+  return `${fence} ${text} ${fence}`;
 }
 const kindLabel = (kind) => (kind === "agent" ? "◆ agent" : "◇ workflow");
 

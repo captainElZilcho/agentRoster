@@ -260,3 +260,27 @@ test("Markdown card text cannot inject HTML, links, images or fake sections", ()
   assert.equal(lines.filter((l) => l.startsWith("Definition:")).length, 1, "only the renderer's own footer");
   assert.ok(lines.some((l) => l.startsWith("\\# &lt;img")), "purpose's leading # is escaped");
 });
+
+test("a backslash in card text cannot cancel the Markdown escape", () => {
+  const f = load("ok");
+  f.roster.cards.find((x) => x.id === "fetcher").name = "\\[open\\](javascript:alert(1))";
+  const md = renderCardMarkdown(viewOf(f, "fetcher"));
+  for (const m of md.matchAll(/(\\*)\]\(javascript:/g)) {
+    assert.equal(m[1].length % 2, 1, `"]" before javascript: must stay escaped: ${m[0]}`);
+  }
+});
+
+test("a quote with backticks cannot break out of its code span", () => {
+  const f = load("ok");
+  const c = f.roster.cards.find((x) => x.id === "fetcher");
+  const key = Object.keys(c.evidence).find((k) => Array.isArray(c.evidence[k]) && c.evidence[k].length);
+  c.evidence[key][0].quote = 'a `` <img src="http://127.0.0.1:9/x.png"> `` b';
+  const md = renderCardMarkdown(viewOf(f, "fetcher"));
+  const row = md.split("\n").find((l) => l.includes("127.0.0.1:9/x.png"));
+  const cell = row.split(" | ")[3];
+  const fence = cell.match(/^`+/)[0];
+  const inner = cell.slice(fence.length, -fence.length);
+  assert.ok(cell.endsWith(fence), "closed by the same fence");
+  const longest = Math.max(0, ...(inner.match(/`+/g) ?? []).map((r) => r.length));
+  assert.ok(fence.length > longest, `fence ${fence.length} must be longer than the longest backtick run ${longest}`);
+});
