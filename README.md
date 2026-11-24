@@ -77,6 +77,12 @@ outside the code (a prompt in a database, a model left to an SDK's default) is s
   same cards ([format](spec/answers-file-v0.1.md)).
 - When it runs without a person (in CI, for example), it never asks and never writes: unsure
   picks are marked "to confirm" on the card.
+- **On a project you don't trust, keep your agent on a short leash.** The skill is run by your
+  own coding agent, so your agent's permissions are what really stop it from doing something
+  wrong. On a project you didn't write, use a mode that asks before each file write and each
+  command. Your agent may also load the project's `CLAUDE.md` or `AGENTS.md` as instructions when
+  it starts inside the project. To avoid that, start it in another folder and name the project's
+  folder in your request.
 
 ## What it finds
 

@@ -209,8 +209,8 @@ node <skill>/scripts/check-cards.mjs <run> --project <project>
 Then follow `VALIDATION.md` (the validator checks each card against the code), then:
 
 ```
-node <skill>/scripts/redact-check.mjs <run> --project <project>
 node <skill>/scripts/render-cards.mjs <run>
+node <skill>/scripts/redact-check.mjs <run> --project <project>
 ```
 
 `check-cards.mjs` checks that the cards, the map and the coverage name the same agents; that every
@@ -219,4 +219,6 @@ relative with forward slashes; that a field with an unknown is empty; that a wor
 `steps` report to it; and, in the project, that each quote is on the line it cites (spaces
 collapsed, part of a line is fine). A wrong line is fixed by reading the file again, never by
 changing the quote to fit. A failed check is fixed and run again; a run never ends with a known leak or
-an invalid file. `render-cards.mjs` writes `cards/<id>.md` and `cards.html` in the run folder.
+an invalid file. `render-cards.mjs` writes `cards/<id>.md` and `cards.html` in the run folder;
+`redact-check.mjs` runs after it so the rendered cards are checked too. A leak in a rendered card
+is fixed in `roster.json`, then render and check again.
