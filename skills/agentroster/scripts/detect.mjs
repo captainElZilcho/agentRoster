@@ -21,7 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { compareText } from "./lib/order.mjs";
 import { isEntryPoint } from "./lib/cli.mjs";
-import { isSafeListedPath, isSecretName, SECRET_DIRS } from "./lib/project-files.mjs";
+import { firstLink, isSafeListedPath, isSecretName, outputFolders, SECRET_DIRS, writeNoFollow } from "./lib/project-files.mjs";
 
 /** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"|"unreadable"|"submodule"} SkipReason */
 
@@ -361,6 +361,7 @@ function reason(err) {
     case "ENOENT": return "not found";
     case "ENOTDIR": return "not a folder";
     case "EACCES": case "EPERM": return "no permission";
+    case "ELOOP": return "is a link";
     default: return err.message;
   }
 }
@@ -403,8 +404,14 @@ export function main(argv) {
   if (out === null) {
     process.stdout.write(text);
   } else {
+    // A project could plant its output folder or run folder as a link to elsewhere.
+    const link = firstLink(outputFolders(dir, path.dirname(out)));
+    if (link !== null) {
+      console.error(`cannot write ${out}: ${link} is a link`);
+      return 2;
+    }
     try {
-      fs.writeFileSync(out, text);
+      writeNoFollow(out, text);
     } catch (err) {
       console.error(`cannot write ${out} (${reason(err)})`);
       return 2;

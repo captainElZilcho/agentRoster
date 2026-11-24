@@ -284,3 +284,58 @@ test("a quote with backticks cannot break out of its code span", () => {
   const longest = Math.max(0, ...(inner.match(/`+/g) ?? []).map((r) => r.length));
   assert.ok(fence.length > longest, `fence ${fence.length} must be longer than the longest backtick run ${longest}`);
 });
+
+test("CLI refuses a linked output folder, run folder or cards folder and writes nothing there", async () => {
+  const { symlinkSync, mkdirSync } = await import("node:fs");
+  for (const where of ["output", "run", "cards"]) {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+    try {
+      const target = path.join(tmp, "elsewhere");
+      mkdirSync(target);
+      let run;
+      if (where === "output") {
+        cpSync(fx("ok").pathname, path.join(target, "run-1"), { recursive: true });
+        symlinkSync("elsewhere", path.join(tmp, ".agentroster"));
+        run = path.join(tmp, ".agentroster", "run-1");
+      } else if (where === "run") {
+        cpSync(fx("ok").pathname, path.join(target, "real"), { recursive: true });
+        mkdirSync(path.join(tmp, ".agentroster"));
+        symlinkSync(path.join(target, "real"), path.join(tmp, ".agentroster", "run-1"));
+        run = path.join(tmp, ".agentroster", "run-1");
+      } else {
+        run = path.join(tmp, ".agentroster", "run-1");
+        cpSync(fx("ok").pathname, run, { recursive: true });
+        symlinkSync(target, path.join(run, "cards"));
+      }
+      const r = cli([run]);
+      assert.equal(r.code, 2, `${where}: ${r.out}${r.err}`);
+      assert.match(r.err, /is a link\n$/, where);
+      const written = readdirSync(target, { recursive: true }).filter((f) => /cards\.html$|\.md$/.test(f) && !/map\.md$/.test(f));
+      assert.deepEqual(written, [], `${where}: nothing rendered at the link's target`);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+});
+
+test("CLI refuses a linked card file and leaves its target alone", async () => {
+  const { symlinkSync, mkdirSync } = await import("node:fs");
+  withRun("ok", (run) => {
+    mkdirSync(path.join(run, "cards"));
+    writeFileSync(path.join(run, "victim.txt"), "keep me\n");
+    symlinkSync(path.join(run, "victim.txt"), path.join(run, "cards", "fetcher.md"));
+    const r = cli([run]);
+    assert.equal(r.code, 2);
+    assert.match(r.err, /fetcher\.md \(is a link\)\n$/);
+    assert.equal(readFileSync(path.join(run, "victim.txt"), "utf8"), "keep me\n");
+  });
+});
+
+test("CLI renders again into the same run folder", () => {
+  withRun("ok", (run) => {
+    assert.equal(cli([run]).code, 0);
+    const r = cli([run]);
+    assert.equal(r.code, 0, r.out + r.err);
+    assert.equal(readFileSync(path.join(run, "cards", "fetcher.md"), "utf8"), expected("fetcher"));
+  });
+});

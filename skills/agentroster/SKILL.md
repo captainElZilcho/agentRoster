@@ -72,6 +72,12 @@ Exit codes: `0` ok and `2` a file or folder could not be used, for all eight. `1
 found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `redact-check.mjs`,
 `validate-card.mjs`, `check-cards.mjs` and `validate-answers.mjs`; `detect.mjs` and `render-cards.mjs` exit `0` or `2`. If `node --version` is missing or below 20, stop and tell the user.
 
+`detect.mjs` and `render-cards.mjs` never write through a link. If one says a folder "is a link",
+the project may have planted it to send the run's files elsewhere: stop and tell the user, and
+never remove or replace the link or pick another folder yourself. Example: "cannot write
+.agentroster/run-2026-11-24-1/detect.json: .agentroster is a link" means the user picks the
+output folder.
+
 ## Step 1: setup
 
 1. **Project root.** The folder the user names is the project. When they name none, it is the

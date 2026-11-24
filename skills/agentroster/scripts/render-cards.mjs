@@ -3,9 +3,10 @@
 // what shows where; both renderers use it. Usage: render-cards.mjs <run-dir>
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "./lib/cli.mjs";
+import { firstLink, outputFolders, writeNoFollow } from "./lib/project-files.mjs";
 import { compareText } from "./lib/order.mjs";
 import { validateRosterFile } from "./validate-card.mjs";
 import { validateCoverage } from "./validate-coverage.mjs";
@@ -383,7 +384,7 @@ export function renderCardsPage(roster, coverage) {
 const USAGE = "usage: render-cards.mjs <run-dir>";
 class CliError extends Error {}
 const reason = (err) =>
-  ({ ENOENT: "not found", EACCES: "no permission", EPERM: "no permission", EISDIR: "is a folder" })[err?.code] ?? "unreadable";
+  ({ ENOENT: "not found", EACCES: "no permission", EPERM: "no permission", EISDIR: "is a folder", ELOOP: "is a link" })[err?.code] ?? "unreadable";
 
 function readJson(file) {
   let text;
@@ -411,11 +412,21 @@ export function runRenderCardsCli(args, { renderPage = renderCardsPage } = {}) {
     for (const c of roster.cards) if (!SAFE_ID.test(c.id)) throw new CliError(`bad card id "${c.id}"`);
 
     const cardsDir = path.join(dir, "cards");
+    // The output folder, the run folder and cards/ must be real folders, never links to elsewhere.
+    const link = firstLink([...outputFolders(null, dir), cardsDir]);
+    if (link !== null) throw new CliError(`cannot write in ${dir}: ${link} is a link`);
     mkdirSync(cardsDir, { recursive: true });
+    const write = (file, text) => {
+      try {
+        writeNoFollow(file, text);
+      } catch (err) {
+        throw new CliError(`cannot write ${file} (${reason(err)})`);
+      }
+    };
     for (const c of roster.cards) {
-      writeFileSync(path.join(cardsDir, `${c.id}.md`), renderCardMarkdown(cardView(c, roster, coverage.unknowns)));
+      write(path.join(cardsDir, `${c.id}.md`), renderCardMarkdown(cardView(c, roster, coverage.unknowns)));
     }
-    if (renderPage) writeFileSync(path.join(dir, "cards.html"), renderPage(roster, coverage));
+    if (renderPage) write(path.join(dir, "cards.html"), renderPage(roster, coverage));
     console.log(`written: ${plural(roster.cards.length, "card")} in ${cardsDir}`);
     return 0;
   } catch (err) {

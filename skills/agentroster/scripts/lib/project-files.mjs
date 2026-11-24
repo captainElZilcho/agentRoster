@@ -1,6 +1,7 @@
 // Which project files a script may read, and how: never a secret file, never through a link.
+// Output is written the same way: never through a link a scanned project could plant.
 
-import { lstatSync } from "node:fs";
+import { closeSync, constants, fstatSync, ftruncateSync, lstatSync, openSync, writeSync } from "node:fs";
 import path from "node:path";
 import { readRegularFile } from "./cli.mjs";
 
@@ -55,5 +56,56 @@ export function readProjectFile(root, rel) {
     return readRegularFile(path.join(root, ...segs)); // the leaf is opened without following a link
   } catch {
     return null;
+  }
+}
+
+/**
+ * The folders an output file goes through that a scanned project could have planted as links:
+ * every folder from `root` (not included) down to `dir` when `dir` is inside `root`, else `dir`
+ * and its parent (the run folder and the output folder).
+ * @param {string|null} root
+ * @param {string} dir
+ * @returns {string[]}
+ */
+export function outputFolders(root, dir) {
+  const d = path.resolve(dir);
+  const rel = root === null ? ".." : path.relative(path.resolve(root), d);
+  if (rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel)) {
+    const segs = rel.split(path.sep);
+    return segs.map((_, i) => path.join(path.resolve(root), ...segs.slice(0, i + 1)));
+  }
+  return [path.dirname(d), d];
+}
+
+/**
+ * The first of `dirs` that is a link, or null. A folder that does not exist yet is not a link.
+ * @param {string[]} dirs
+ * @returns {string|null}
+ */
+export function firstLink(dirs) {
+  for (const d of dirs) {
+    try {
+      if (lstatSync(d).isSymbolicLink()) return d;
+    } catch {
+      // missing: nothing planted there
+    }
+  }
+  return null;
+}
+
+/**
+ * Write a file, replacing a regular file but never writing through a link (error code ELOOP)
+ * or into something that is not a regular file.
+ * @param {string} file
+ * @param {string} text
+ */
+export function writeNoFollow(file, text) {
+  const fd = openSync(file, constants.O_WRONLY | constants.O_CREAT | constants.O_NOFOLLOW | constants.O_NONBLOCK, 0o644);
+  try {
+    if (!fstatSync(fd).isFile()) throw Object.assign(new Error("not a regular file"), { code: "not a regular file" });
+    ftruncateSync(fd, 0);
+    writeSync(fd, text);
+  } finally {
+    closeSync(fd);
   }
 }

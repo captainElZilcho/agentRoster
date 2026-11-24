@@ -535,3 +535,10 @@ test("the previous run skips folders dated after today and is named to the user"
   assert.match(item, /dated after today/);
   assert.match(item, /Tell the user which one you used/);
 });
+
+test("SKILL.md says a link in the output path stops the run, never worked around", () => {
+  const text = read("SKILL.md").replace(/\s+/g, " ");
+  assert.match(text, /is a link/);
+  assert.match(text, /stop and tell the user/i);
+  assert.match(text, /never remove or replace the link/);
+});

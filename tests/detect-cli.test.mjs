@@ -70,3 +70,50 @@ test("no arguments, an unknown option or a missing value exit 2 with usage", () 
     assert.equal(r.stderr.trim(), USAGE);
   }
 });
+
+test("refuses to write through a linked output folder and writes nothing", () => {
+  const d = project();
+  try {
+    const elsewhere = path.join(d, "elsewhere");
+    fs.mkdirSync(path.join(elsewhere, "run-1"), { recursive: true });
+    fs.symlinkSync("elsewhere", path.join(d, ".agentroster"));
+    const out = path.join(d, ".agentroster", "run-1", "detect.json");
+    const r = run(d, "--out", out, "--exclude", ".agentroster");
+    assert.equal(r.status, 2);
+    assert.equal(r.stderr, `cannot write ${out}: ${path.join(d, ".agentroster")} is a link\n`);
+    assert.equal(fs.existsSync(path.join(elsewhere, "run-1", "detect.json")), false);
+  } finally { fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+test("refuses a linked run folder and a linked output file", () => {
+  const d = project();
+  try {
+    fs.mkdirSync(path.join(d, ".agentroster", "real"), { recursive: true });
+    fs.symlinkSync("real", path.join(d, ".agentroster", "run-1"));
+    let out = path.join(d, ".agentroster", "run-1", "detect.json");
+    let r = run(d, "--out", out, "--exclude", ".agentroster");
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /run-1 is a link\n$/);
+
+    fs.mkdirSync(path.join(d, ".agentroster", "run-2"));
+    fs.writeFileSync(path.join(d, "victim.txt"), "keep me\n");
+    out = path.join(d, ".agentroster", "run-2", "detect.json");
+    fs.symlinkSync(path.join(d, "victim.txt"), out);
+    r = run(d, "--out", out, "--exclude", ".agentroster");
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /cannot write .*detect\.json \(is a link\)\n$/);
+    assert.equal(fs.readFileSync(path.join(d, "victim.txt"), "utf8"), "keep me\n");
+  } finally { fs.rmSync(d, { recursive: true, force: true }); }
+});
+
+test("writing detect.json again over a regular file still works", () => {
+  const d = project();
+  try {
+    fs.mkdirSync(path.join(d, ".agentroster", "run-1"), { recursive: true });
+    const out = path.join(d, ".agentroster", "run-1", "detect.json");
+    fs.writeFileSync(out, "old\n");
+    const r = run(d, "--out", out, "--exclude", ".agentroster");
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(JSON.parse(fs.readFileSync(out, "utf8")).detect, "0.1");
+  } finally { fs.rmSync(d, { recursive: true, force: true }); }
+});
