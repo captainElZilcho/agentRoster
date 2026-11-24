@@ -604,3 +604,32 @@ test("CLI: a secrets.json that is not valid JSON fails closed", () => {
   assert.equal(r.status, 2);
   assert.match(r.stderr, /secrets\.json \(not valid JSON\)/);
 });
+
+test("CLI: a linked config file is compared too, without printing its contents", () => {
+  for (const [name, text, value] of [
+    [".mcp.json", JSON.stringify({ mcpServers: { x: { env: { TOKEN: "FAKE-linked-mcp-token-1" } } } }), "FAKE-linked-mcp-token-1"],
+    [".npmrc", "//registry.example.test/:_authToken=FAKE-linked-npm-token-2\n", "FAKE-linked-npm-token-2"],
+    ["secrets.json", JSON.stringify({ key: "FAKE-linked-secrets-json-3" }), "FAKE-linked-secrets-json-3"],
+  ]) {
+    const project = tmp();
+    const outside = tmp();
+    put(outside, "real", text);
+    fs.symlinkSync(path.join(outside, "real"), path.join(project, name));
+    const dir = tmp();
+    put(dir, "map.md", `uses ${value}\n`);
+    const r = run(dir, "--project", project);
+    assert.equal(r.status, 1, `${name}: ${r.stdout}${r.stderr}`);
+    assert.equal(r.stdout, "leak: map.md:1 (value from config)\nleaks: 1\n", name);
+    assert.ok(!(r.stdout + r.stderr).includes(value), name);
+  }
+});
+
+test("CLI: a linked config file that cannot be read is counted as not compared", () => {
+  const project = tmp();
+  fs.symlinkSync(path.join(project, "gone.json"), path.join(project, ".mcp.json"));
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, "not compared: 1 linked config files\n");
+});

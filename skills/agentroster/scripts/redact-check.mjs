@@ -374,18 +374,29 @@ function collectConfig(node, inside, out, inArgs = false) {
 /**
  * Read secret values from MCP and Claude Code config files, .npmrc, secrets.json and
  * credentials.json in a project, to compare in memory only. A file that cannot be read or
- * parsed throws (fails closed), with its path in `file`.
+ * parsed throws (fails closed), with its path in `file`. A linked one is followed, like a linked
+ * .env; `report.linkedConfig` gets how many linked ones could not be read.
  * @param {string} projectDir
+ * @param {{linkedConfig?: number}} [report]
  * @returns {string[]} Values of 8 characters or more.
  */
-export function readConfigValues(projectDir) {
+export function readConfigValues(projectDir, report = {}) {
   const found = new Set();
-  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name))
-    .filter((rel) => CONFIG_FILES.test(rel) || NPMRC.test(rel) || SECRET_JSON.test(rel));
-  for (const rel of names) {
+  const isConfig = (rel) => CONFIG_FILES.test(rel) || NPMRC.test(rel) || SECRET_JSON.test(rel);
+  const others = [];
+  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name), others).filter(isConfig);
+  const texts = new Map();
+  report.linkedConfig = 0;
+  for (const o of others) {
+    if (o.kind !== "link" || !isConfig(o.path)) continue;
+    const text = readLinkedFile(path.join(projectDir, o.path));
+    if (text === null) report.linkedConfig++;
+    else texts.set(o.path, text);
+  }
+  for (const rel of [...names, ...texts.keys()].sort(compareText)) {
     const file = path.join(projectDir, rel);
     try {
-      const text = readFileSync(file, "utf8").replace(/^\ufeff/, "");
+      const text = (texts.get(rel) ?? readFileSync(file, "utf8")).replace(/^\ufeff/, "");
       if (NPMRC.test(rel)) collectNpmrc(text, found);
       else if (SECRET_JSON.test(rel)) collectSecretJson(JSON.parse(text), found);
       else collectConfig(JSON.parse(stripJsonc(text)), false, found);
@@ -451,8 +462,9 @@ export function runRedactCheckCli(args) {
       current = project;
       const report = {};
       envValues = readEnvValues(project, report);
-      configValues = readConfigValues(project);
+      configValues = readConfigValues(project, report);
       if (report.linkedEnv > 0) console.error(`not compared: ${report.linkedEnv} linked .env files`);
+      if (report.linkedConfig > 0) console.error(`not compared: ${report.linkedConfig} linked config files`);
       // The answers file is the one file the skill writes into a project, so it is checked too.
       const answers = path.join(project, "agentroster.json");
       current = answers;
