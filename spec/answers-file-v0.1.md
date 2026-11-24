@@ -39,7 +39,7 @@ so everyone gets the same cards.
 | `value` | A type code from the [roster card standard](roster-card-standard-v0.2.md) |
 | `reason` | Optional. Why, in a few words. Never a secret, never a person's name |
 | `date` | When it was answered, `YYYY-MM-DD` (UTC) |
-| `based_on` | Optional. The line the pick was based on: `file`, `line` (or `null`), `quote`, with any secret replaced by `[redacted]` |
+| `based_on` | Optional. The line the pick was based on: `file` (relative to the project root, with forward slashes), `line` (or `null`), `quote`, with any secret replaced by `[redacted]` |
 
 No other keys are allowed in v0.1.
 

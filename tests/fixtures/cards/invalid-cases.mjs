@@ -26,6 +26,42 @@ const with_ = (change) => {
 /** @type {InvalidCase[]} */
 export const invalidCases = [
   {
+    name: "source-path-absolute",
+    card: with_((c) => { c.source.files[0].path = "/etc/passwd"; }),
+    path: "/source/files/0/path",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
+    name: "source-path-dotdot",
+    card: with_((c) => { c.source.files[0].path = "../outside/app.py"; }),
+    path: "/source/files/0/path",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
+    name: "source-path-backslash",
+    card: with_((c) => { c.source.files[0].path = "app\\summarise.py"; }),
+    path: "/source/files/0/path",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
+    name: "source-path-drive",
+    card: with_((c) => { c.source.files[0].path = "C:/app/summarise.py"; }),
+    path: "/source/files/0/path",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
+    name: "evidence-file-home",
+    card: with_((c) => { c.evidence = { purpose: [{ file: "~/notes.md", line: 1, quote: "x", found_by: "agent" }] }; }),
+    path: "/evidence/purpose/0/file",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
+    name: "evidence-file-dotdot",
+    card: with_((c) => { c.evidence = { purpose: [{ file: "app/../../x.py", line: 1, quote: "x", found_by: "agent" }] }; }),
+    path: "/evidence/purpose/0/file",
+    message: "must be a repo-relative path with forward slashes",
+  },
+  {
     name: "missing-field",
     card: with_((c) => { delete c.purpose; }),
     path: "/",

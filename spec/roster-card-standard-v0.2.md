@@ -106,8 +106,8 @@ The attributes the user named, in one fixed order.
 | `handoffs` | Agents, types or people it takes work from and passes work to (section 7) | — |
 | `org` | Where it sits in the org chart: `reports_to` (a card ID, or `null` for the app), `group` (team or department inside the app) | Section 7 |
 | `stats` | Usage stats (section 4); `null` until a runtime fills them | Logged by the runtime |
-| `source` | Where the definition lives: `{files: [{path, line}], found_by}`, so the card can be checked against it. `found_by` is `script`, `agent` or `hand` | — |
-| `evidence` | Proof for filled fields, keyed by field path (for example `"guardrails.permission"`). Each entry is a list of `{file, line, quote, found_by}`; `found_by` is `script`, `agent` or `hand` | — |
+| `source` | Where the definition lives: `{files: [{path, line}], found_by}`, so the card can be checked against it. `path` is relative to the project root, with forward slashes (no leading `/`, `~`, drive letter or `..`). `found_by` is `script`, `agent` or `hand` | — |
+| `evidence` | Proof for filled fields, keyed by field path (for example `"guardrails.permission"`). Each entry is a list of `{file, line, quote, found_by}`; `file` is relative to the project root, like `source` paths; `found_by` is `script`, `agent` or `hand` | — |
 | `provenance` | Author, created, last changed, licence, signature (each can be `null`) | A2A `signatures` |
 | `profiles` | Names of the profiles the card meets (section 9) | — |
 | `extensions` | Extra fields under a namespace, never mixed into the core (section 9) | A2A `AgentExtension` idea |

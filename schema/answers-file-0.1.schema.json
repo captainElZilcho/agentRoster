@@ -22,6 +22,11 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?![/\\\\~])(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!(?:.*/)?\\.\\.(?:/|$)).+$",
+      "x-error": "must be a repo-relative path with forward slashes"
+    },
     "answer": {
       "type": "object",
       "properties": {
@@ -50,8 +55,7 @@
           "type": "object",
           "properties": {
             "file": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/$defs/path"
             },
             "line": {
               "type": [

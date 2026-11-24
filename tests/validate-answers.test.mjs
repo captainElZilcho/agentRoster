@@ -166,3 +166,11 @@ test("the CLI prints a project's key names without terminal control characters",
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("based_on.file must be a repo-relative path", () => {
+  for (const bad of ["/etc/passwd", "../outside/x.py", "a\\b.py", "~/x.py", "C:/x.py"]) {
+    const d = load();
+    d.answers[0].based_on.file = bad;
+    fails(d, "/answers/0/based_on/file", /repo-relative path/);
+  }
+});
