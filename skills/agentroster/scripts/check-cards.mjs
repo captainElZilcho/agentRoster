@@ -5,9 +5,10 @@
 // has an agentroster.json, that each stored answer is on its card (stale answers are noted).
 // Usage: check-cards.mjs <run-dir> --project <dir>
 
-import { lstatSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { isEntryPoint } from "./lib/cli.mjs";
+import { isEntryPoint, printable, readRegularFile } from "./lib/cli.mjs";
+import { readProjectFile } from "./lib/project-files.mjs";
 import { canonicalJson, compareText } from "./lib/order.mjs";
 import { validateRosterFile } from "./validate-card.mjs";
 import { validateCoverage } from "./validate-coverage.mjs";
@@ -251,6 +252,9 @@ export function checkQuotes(roster, coverage, readFile) {
   return { valid: sorted.length === 0, errors: sorted };
 }
 
+/** A string as a literal piece of a RegExp. */
+const escapeRegExp = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /**
  * Check that each stored answer is on its card: the type as written, with the answers file's
  * line that holds its "value" as the first type evidence (found_by "hand"). The file may be laid
@@ -266,10 +270,9 @@ export function checkAnswers(roster, answers, answersText) {
   const errors = [];
   const lines = String(answersText).replace(/^\uFEFF/, "").split(/\r?\n/);
   const byId = new Map((roster.cards ?? []).map((c) => [c.id, c]));
-  // a.value is a type code (the schema checked it), so it is safe inside the pattern.
   const isAnswerItem = (item, a) =>
     item?.file === ANSWERS_FILE && item?.found_by === "hand" && Number.isInteger(item?.line) &&
-    new RegExp(`"value"\\s*:\\s*"${a.value}"`).test(lines[item.line - 1] ?? "");
+    new RegExp(`"value"\\s*:\\s*"${escapeRegExp(a.value)}"`).test(lines[item.line - 1] ?? "");
   for (const a of answers.answers) {
     const card = byId.get(a.card);
     if (!card) continue;
@@ -330,6 +333,7 @@ const reason = (err) => {
     case "EACCES":
     case "EPERM": return "no permission";
     case "EISDIR": return "is a folder";
+    case "too large": return "too large";
     default: return "unreadable";
   }
 };
@@ -354,20 +358,11 @@ function readJson(file) {
 /** The project's agentroster.json text, or null when there is none. A link, a folder or an
  * unreadable file is an error, never "no file" (redact-check blocks a linked one too). */
 function readAnswersText(project) {
-  const file = path.join(project, ANSWERS_FILE);
-  let st;
   try {
-    st = lstatSync(file);
+    return readRegularFile(path.join(project, ANSWERS_FILE)); // opened once, never through a link
   } catch (err) {
     if (err.code === "ENOENT") return null;
-    throw new CliError(`cannot read ${ANSWERS_FILE} (${reason(err)})`);
-  }
-  if (st.isSymbolicLink()) throw new CliError(`cannot read ${ANSWERS_FILE} (is a link)`);
-  if (st.isDirectory()) throw new CliError(`cannot read ${ANSWERS_FILE} (is a folder)`);
-  try {
-    return readFileSync(file, "utf8");
-  } catch (err) {
-    throw new CliError(`cannot read ${ANSWERS_FILE} (${reason(err)})`);
+    throw new CliError(`cannot read ${ANSWERS_FILE} (${err.code === "ELOOP" ? "is a link" : reason(err)})`);
   }
 }
 
@@ -388,13 +383,8 @@ export function runCheckCardsCli(args) {
     const mapText = readText(path.join(dir, "map.md"));
     if (!validateRosterFile(roster).valid) throw new CliError("invalid roster.json: run validate-card.mjs for details");
     if (!validateCoverage(coverage).valid) throw new CliError("invalid coverage.json: run validate-coverage.mjs for details");
-    const readFile = (file) => {
-      try {
-        return readFileSync(path.join(project, file), "utf8");
-      } catch {
-        return null;
-      }
-    };
+    // Never a secret file, never through a link: the same rule as detect.mjs.
+    const readFile = (file) => readProjectFile(project, file);
     const errors = [...checkCards(roster, coverage, mapText).errors, ...checkQuotes(roster, coverage, readFile).errors];
     const answersText = readAnswersText(project);
     let notes = [];
@@ -412,12 +402,12 @@ export function runCheckCardsCli(args) {
       notes = staleAnswers(roster, answers, readFile);
     }
     const result = { valid: errors.length === 0, errors: [...new Set(errors)].sort(compareText) };
-    if (result.valid) console.log(`ok ${dir}`);
-    else for (const e of result.errors) console.log(e);
-    for (const n of notes) console.log(`note: ${n}`);
+    if (result.valid) console.log(`ok ${printable(dir)}`);
+    else for (const e of result.errors) console.log(printable(e));
+    for (const n of notes) console.log(`note: ${printable(n)}`);
     return result.valid ? 0 : 1;
   } catch (err) {
-    console.error(err instanceof CliError ? err.message : "error: unexpected failure");
+    console.error(err instanceof CliError ? printable(err.message) : "error: unexpected failure");
     return 2;
   }
 }

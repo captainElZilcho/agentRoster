@@ -2,6 +2,7 @@
 // and the offline HTML page cards.html. cardView() is the one place that decides
 // what shows where; both renderers use it. Usage: render-cards.mjs <run-dir>
 
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { isEntryPoint } from "./lib/cli.mjs";
@@ -293,8 +294,16 @@ export function renderCardMarkdown(v) {
 
 const TEMPLATE_DIR = new URL("../templates/", import.meta.url);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+// One pass: a placeholder that appears inside filled-in data stays as written.
 const fill = (template, values) =>
-  Object.entries(values).reduce((out, [k, v]) => out.split(`{{${k}}}`).join(v), template);
+  template.replace(/\{\{([A-Z]+)\}\}/g, (m, k) => (Object.hasOwn(values, k) ? values[k] : m));
+
+/** No network at all; styles inline; only the page's own script (by hash) may run. */
+function contentPolicy(template) {
+  const script = /<script>([\s\S]*?)<\/script>/.exec(template)?.[1] ?? "";
+  const hash = createHash("sha256").update(script).digest("base64");
+  return `default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-${hash}'; base-uri 'none'; form-action 'none'`;
+}
 
 function htmlTile(t) {
   const cls = ["tile", t.wide ? "wide" : "", t.gap ? "gap" : ""].filter(Boolean).join(" ");
@@ -366,7 +375,7 @@ export function renderCardsPage(roster, coverage) {
     : `<p class="empty">No agents or workflows found.</p>`;
   const template = readFileSync(new URL("cards.html", TEMPLATE_DIR), "utf8");
   const css = readFileSync(new URL("cards.css", TEMPLATE_DIR), "utf8");
-  return fill(template, { CSS: css.trim(), COUNTS: esc(counts), RUN: esc(run), CARDS: body });
+  return fill(template, { CSP: contentPolicy(template), CSS: css.trim(), COUNTS: esc(counts), RUN: esc(run), CARDS: body });
 }
 
 // Command line

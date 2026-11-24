@@ -130,3 +130,24 @@ test("the HTML card shows the type note as text beside the type", async () => {
   const html = renderCardsPage(roster, coverage);
   assert.match(html, /<span class="tag">researcher<\/span><span class="tag type-note">to confirm \(could be builder\)<\/span>/);
 });
+
+test("the page carries a Content-Security-Policy that allows no network and only its own script", async () => {
+  const { createHash } = await import("node:crypto");
+  const html = page(load("ok"));
+  const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]+)">/.exec(html);
+  assert.ok(csp, "CSP meta tag");
+  assert.match(csp[1], /default-src 'none'/);
+  assert.doesNotMatch(csp[1], /https?:|\*/);
+  const script = /<script>([\s\S]*?)<\/script>/.exec(html)[1];
+  const hash = createHash("sha256").update(script).digest("base64");
+  assert.ok(csp[1].includes(`script-src 'sha256-${hash}'`), csp[1]);
+  assert.equal((html.match(/<script/g) ?? []).length, 1, "one script");
+  assert.ok(html.indexOf("Content-Security-Policy") < html.indexOf("<style"), "CSP comes before the styles");
+});
+
+test("a placeholder inside data is never filled", () => {
+  const f = load("ok");
+  f.roster.snapshot.project = "x {{CARDS}} {{CSS}}";
+  const html = page(f);
+  assert.ok(html.includes("x {{CARDS}} {{CSS}}"), "the run line keeps the text as written");
+});

@@ -4,7 +4,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { isEntryPoint } from "./lib/cli.mjs";
+import { isEntryPoint, printable } from "./lib/cli.mjs";
 import { compareText } from "./lib/order.mjs";
 import { validateCoverage } from "./validate-coverage.mjs";
 
@@ -213,13 +213,13 @@ export function runCheckMapCli(args) {
     }
     const result = checkMap(mapText, coverage);
     if (result.valid) {
-      console.log(`ok ${mapFile}`);
+      console.log(`ok ${printable(mapFile)}`);
       return 0;
     }
-    for (const e of result.errors) console.log(e);
+    for (const e of result.errors) console.log(printable(e));
     return 1;
   } catch (err) {
-    console.error(err instanceof CliError ? err.message : "error: unexpected failure");
+    console.error(err instanceof CliError ? printable(err.message) : "error: unexpected failure");
     return 2;
   }
 }

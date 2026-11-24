@@ -308,3 +308,31 @@ test("a path from git ls-files must stay inside the project", () => {
     assert.equal(isSafeListedPath(bad), false, bad);
   }
 });
+
+test("more secret files are never listed: .envrc, token.json, service accounts, .aws, .docker", () => {
+  const root = tmp();
+  try {
+    put(root, "a.py");
+    for (const f of [".envrc", "token.json", "service-account-prod.json", ".aws/config", ".docker/config.json"]) put(root, f, "FAKE\n");
+    const r = listFiles(root);
+    assert.deepEqual(r.files, ["a.py"]);
+    assert.equal(r.skipped.secret_file, 5);
+  } finally { cleanup(root); }
+});
+
+test("git gets a minimal environment: only the variables it needs", () => {
+  const saved = { ...process.env };
+  try {
+    process.env.FAKE_SECRET_TOKEN = "FAKE-1";
+    process.env.LD_PRELOAD = "/nonexistent/FAKE.so";
+    process.env.GIT_SSH_COMMAND = "FAKE";
+    const { env } = gitInvocation("/x", ["status"]);
+    for (const k of ["FAKE_SECRET_TOKEN", "LD_PRELOAD", "GIT_SSH_COMMAND"]) assert.equal(env[k], undefined, k);
+    assert.equal(env.PATH, process.env.PATH);
+    assert.equal(env.GIT_CONFIG_NOSYSTEM, "1");
+    assert.equal(env.GIT_NO_LAZY_FETCH, "1");
+  } finally {
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  }
+});

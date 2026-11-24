@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { MAP_SECTIONS } from "../skills/agentroster/scripts/check-map.mjs";
+import { gitInvocation } from "../skills/agentroster/scripts/detect.mjs";
 
 const skill = "skills/agentroster";
 const read = (rel) => fs.readFileSync(path.join(skill, rel), "utf8");
@@ -147,6 +148,11 @@ test("SKILL.md's git-ignore check cannot run the project's git hooks or fsmonito
   assert.match(cmd[1], /-c core\.fsmonitor=false/);
   assert.match(cmd[1], /-c core\.hooksPath=\/dev\/null/);
   assert.match(cmd[1], /--no-index/);
+  // The same git settings as the scripts use (detect.mjs gitInvocation).
+  const { args } = gitInvocation("/x", []);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-c") assert.ok(cmd[1].includes(`-c ${args[i + 1]}`), `SKILL.md check-ignore has -c ${args[i + 1]}`);
+  }
   // No other git command on the scanned project.
   const others = [...joined.matchAll(/`(git [^`]*)`/g)].map((m) => m[1]).filter((c) => c !== cmd[1]);
   assert.deepEqual(others, [], "SKILL.md runs no other git command");

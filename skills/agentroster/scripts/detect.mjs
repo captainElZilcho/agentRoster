@@ -21,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { compareText } from "./lib/order.mjs";
 import { isEntryPoint } from "./lib/cli.mjs";
+import { isSafeListedPath, isSecretName, SECRET_DIRS } from "./lib/project-files.mjs";
 
 /** @typedef {"ignored"|"dependencies"|"build_output"|"run_folder"|"secret_file"|"link"|"binary"|"too_large"|"unreadable"|"submodule"} SkipReason */
 
@@ -48,36 +49,20 @@ function dirReason(name) {
   return null;
 }
 
-/**
- * True when a file name looks like a secret. These files are never opened.
- * @param {string} name
- * @returns {boolean}
- */
-function isSecretName(name) {
-  const lower = name.toLowerCase();
-  return (
-    lower === ".env" || lower.startsWith(".env.") ||
-    /\.(pem|key|p12|pfx|kdbx)$/.test(lower) ||
-    /^id_(rsa|ed25519|ecdsa|dsa)/.test(lower) ||
-    lower === ".netrc" || lower === ".npmrc" || lower === ".pypirc" || lower === ".pgpass" ||
-    lower.includes("credential") || lower.includes("secret")
-  );
-}
-
-/** Folder names whose contents are secret. */
-const SECRET_DIRS = new Set([".ssh"]);
+/** Variables git may see: finding programs, the user's own config and ignore file, temp folders, locale. */
+const GIT_ENV_KEEP = new Set(["PATH", "HOME", "USERPROFILE", "XDG_CONFIG_HOME", "SYSTEMROOT", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE"]);
 
 /**
- * How git is run on a project: no caller GIT_* variables, no system config, and no way for the
- * project's own config to run a command (hooks, fsmonitor) or start a fetch (every transport is
- * blocked, which also stops a partial clone's lazy fetch).
+ * How git is run on a project: only the environment git needs (GIT_ENV_KEEP), no system config,
+ * and no way for the project's own config to run a command (hooks, fsmonitor) or start a fetch
+ * (every transport is blocked, which also stops a partial clone's lazy fetch).
  * @param {string} root
  * @param {string[]} args
  * @returns {{args: string[], env: Record<string, string>}}
  */
 export function gitInvocation(root, args) {
-  const env = { ...process.env };
-  for (const k of Object.keys(env)) if (k.startsWith("GIT_")) delete env[k];
+  const env = {};
+  for (const [k, v] of Object.entries(process.env)) if (GIT_ENV_KEEP.has(k.toUpperCase())) env[k] = v;
   env.GIT_CONFIG_NOSYSTEM = "1";
   env.GIT_NO_LAZY_FETCH = "1"; // git 2.44+; older git ignores it, protocol.allow=never still holds
   return {
@@ -109,17 +94,7 @@ function git(root, args) {
   }
 }
 
-/**
- * Is a path printed by git a plain relative path inside the project? A crafted index could list
- * "../x" or "/x"; such a path is never read.
- * @param {string} p
- * @returns {boolean}
- */
-export function isSafeListedPath(p) {
-  if (p === "" || p.startsWith("/") || p.includes("\\")) return false;
-  const q = p.endsWith("/") ? p.slice(0, -1) : p; // git ends a folder entry with one "/"
-  return q !== "" && q.split("/").every((s) => s !== "" && s !== "." && s !== "..");
-}
+export { isSafeListedPath };
 
 /**
  * Walk a folder without following links. A skipped folder counts once.

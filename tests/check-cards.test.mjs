@@ -518,3 +518,71 @@ test("CLI: an agentroster.json that is a link or a folder exits 2; it is never t
     });
   }
 });
+
+function cliWithProject(edit) {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const run = path.join(tmp, "run");
+    const project = path.join(tmp, "project");
+    cpSync(dir("ok").pathname, run, { recursive: true });
+    cpSync(PROJECT, project, { recursive: true });
+    const p = path.join(run, "roster.json");
+    const doc = JSON.parse(readFileSync(p, "utf8"));
+    edit({ doc, project, tmp });
+    writeFileSync(p, JSON.stringify(doc));
+    return cli([run, "--project", project]);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+test("CLI: evidence in a linked file is never read", () => {
+  const r = cliWithProject(({ project, tmp }) => {
+    cpSync(path.join(project, "app/fetcher.py"), path.join(tmp, "outside.py"));
+    rmSync(path.join(project, "app/fetcher.py"));
+    symlinkSync(path.join(tmp, "outside.py"), path.join(project, "app/fetcher.py"));
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, /app\/fetcher\.py is not in the project/);
+});
+
+test("CLI: evidence under a linked folder is never read", () => {
+  const r = cliWithProject(({ project, tmp }) => {
+    cpSync(path.join(project, "app"), path.join(tmp, "outside-app"), { recursive: true });
+    rmSync(path.join(project, "app"), { recursive: true });
+    symlinkSync(path.join(tmp, "outside-app"), path.join(project, "app"));
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, /app\/fetcher\.py is not in the project/);
+});
+
+test("CLI: evidence in a secret-named file is never read", () => {
+  const r = cliWithProject(({ doc, project }) => {
+    cpSync(path.join(project, "app/fetcher.py"), path.join(project, "app/secrets.py"));
+    for (const items of Object.values(card({ roster: doc }, "fetcher").evidence)) {
+      for (const i of items) if (i.file === "app/fetcher.py") i.file = "app/secrets.py";
+    }
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, /app\/secrets\.py is not in the project/);
+});
+
+test("CLI: model-written text is printed without terminal control characters", () => {
+  const r = cliWithProject(({ doc }) => {
+    card({ roster: doc }, "fetcher").evidence.purpose[0].quote = "\u001b[2J\u001b]0;pwned\u0007 x\u202ey";
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.out, /does not contain/);
+  assert.doesNotMatch(r.out, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/);
+});
+
+test("checkAnswers treats the stored value as text, not a pattern", () => {
+  const f = load("ok");
+  const c = card(f, "fetcher");
+  const text = '{\n  "agentroster": "0.1",\n  "answers": [\n    {\n      "card": "fetcher",\n      "field": "type",\n      "value": "' + c.type + '"\n    }\n  ]\n}\n';
+  c.evidence.type = [{ file: "agentroster.json", line: 7, quote: `"value": "${c.type}",`, found_by: "hand" }];
+  const value = c.type.slice(0, -1) + ".";
+  const answers = { agentroster: "0.1", answers: [{ card: "fetcher", field: "type", value }] };
+  const errors = checkAnswers(f.roster, answers, text).errors;
+  assert.ok(errors.some((e) => /type evidence must start with/.test(e)), errors.join("\n"));
+});

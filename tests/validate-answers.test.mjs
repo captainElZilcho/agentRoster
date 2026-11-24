@@ -131,3 +131,38 @@ test("a file that is not JSON is reported without quoting its text", async () =>
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("the CLI refuses a file over the size cap without reading it", async () => {
+  const { mkdtempSync, rmSync, truncateSync, writeFileSync } = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { MAX_FILE_BYTES } = await import("../skills/agentroster/scripts/lib/cli.mjs");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const f = path.join(dir, "agentroster.json");
+    writeFileSync(f, "");
+    truncateSync(f, MAX_FILE_BYTES + 1); // sparse: no disk use
+    const r = spawnSync(process.execPath, [script, f], { encoding: "utf8" });
+    assert.equal(r.status, 2);
+    assert.equal(r.stderr, `cannot read ${f}: too large\n`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the CLI prints a project's key names without terminal control characters", async () => {
+  const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    const f = path.join(dir, "agentroster.json");
+    writeFileSync(f, JSON.stringify({ ...load(), "\u001b[2Jx\u202e": 1 }));
+    const r = spawnSync(process.execPath, [script, f], { encoding: "utf8" });
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /unknown field/);
+    assert.doesNotMatch(r.stdout, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

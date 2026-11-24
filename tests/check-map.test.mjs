@@ -149,3 +149,18 @@ test("the run id's date must be taken_at's date in UTC", () => {
   f.coverage.snapshot.id = "run-2026-11-05-3";
   assert.ok(!checkMap(f.map, f.coverage).errors.some((e) => e.includes("taken_at")));
 });
+
+test("CLI: map text is printed without terminal control characters", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agentroster-"));
+  try {
+    fs.cpSync("tests/fixtures/map/ok", dir, { recursive: true });
+    const p = path.join(dir, "map.md");
+    fs.writeFileSync(p, fs.readFileSync(p, "utf8").replace("| `scout` | agent | agents/scout.py |\n", "| `scout` | agent | agents/scout.py |\n| x\u001b[2J\u202e | agent | y |\n"));
+    const r = run(dir);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /inventory row/);
+    assert.doesNotMatch(r.stdout, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -32,10 +32,11 @@ built yet. Do not write findings or reports by hand.
   `agentroster.json`, and only after the user says yes (step 6).
 - **Never fetch.** A prompt or setting that comes from a database, a URL, an API or an
   environment variable is recorded as unknown ("loaded from X"). Never fetch it.
-- **Never open secret files:** `.env` and `.env.*` (including `.env.example`), `*.pem`, `*.key`,
-  `*.p12`, `*.pfx`, `*.kdbx`, SSH keys (`id_rsa`, `id_ed25519`, `id_ecdsa`, `id_dsa` and files
-  starting with those names), `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, anything in `.ssh/`, and
-  any file whose name has "secret" or "credential" in it.
+- **Never open secret files:** `.env`, `.env.*` (including `.env.example`) and `.envrc`, `*.pem`,
+  `*.key`, `*.p12`, `*.pfx`, `*.kdbx`, SSH keys (`id_rsa`, `id_ed25519`, `id_ecdsa`, `id_dsa` and
+  files starting with those names), `.netrc`, `.npmrc`, `.pypirc`, `.pgpass`, `token.json`,
+  `tokens.json`, `service-account*.json`, anything in `.ssh/`, `.aws/` or `.docker/`, and any file
+  whose name has "secret" or "credential" in it.
 - **Never copy a secret.** If a key, token or password turns up in a file you read, cite the file
   and line only. Write `[redacted]` in any quote that would hold it. Env variable names are fine;
   their values never are.
@@ -78,9 +79,9 @@ found, listed on screen) comes from `validate-coverage.mjs`, `check-map.mjs`, `r
    one clock reading (`date -u +%Y-%m-%dT%H:%M:%SZ`), so they agree; `check-map.mjs` reports a
    run id whose date differs from `taken_at`.
 4. **Git-ignore check.** In a git repository, when the output folder is inside the project, run
-   exactly `git -c core.fsmonitor=false -c core.hooksPath=/dev/null check-ignore --no-index -q <run>/map.md`
-   from the output folder's parent folder (the two settings stop git from running a command the
-   project's own config names). Exit code
+   exactly `git -c core.fsmonitor=false -c core.untrackedCache=false -c core.hooksPath=/dev/null -c protocol.allow=never check-ignore --no-index -q <run>/map.md`
+   from the output folder's parent folder (the settings stop git from running a command the
+   project's own config names, and from fetching anything). Exit code
    `0` means git ignores it. Anything else means it
    does not: **stop and ask the user** to add the output folder to `.gitignore` (for example a
    line `.agentroster/`) or to pick another folder. Do not go on until the check passes. If the
