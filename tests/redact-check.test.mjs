@@ -24,6 +24,15 @@ const shapes = {
   xox: "xoxb-" + "FAKE-redact-0001",
   AIza: "AIza" + "FAKE".repeat(8) + "abc",
   pem: "-----BEGIN " + "RSA PRIVATE KEY-----",
+  sk_live_: "sk_" + "live_" + "FAKE".repeat(5),
+  rk_live_: "rk_" + "live_" + "FAKE".repeat(5),
+  gho_: "gho_" + "FAKE".repeat(9),
+  ghu_: "ghu_" + "FAKE".repeat(9),
+  ghs_: "ghs_" + "FAKE".repeat(9),
+  ghr_: "ghr_" + "FAKE".repeat(9),
+  npm_: "npm_" + "FAKE".repeat(9),
+  xoxe: "xoxe." + "xoxp-1-" + "FAKE-redact-0001",
+  jwt: "eyJ" + "FAKEFAKEabc" + ".eyJ" + "FAKEFAKEdef" + "." + "FAKEFAKEsig",
 };
 
 for (const [name, value] of Object.entries(shapes)) {
@@ -57,7 +66,7 @@ test("leaks are sorted by file then line", () => {
   assert.deepEqual(leaks.map((l) => `${l.file}:${l.line}`), ["a.md:2", "a.md:3", "b.md:1"]);
 });
 
-test("readEnvValues reads .env and .env.* below the root, skips junk folders and links", () => {
+test("readEnvValues reads .env and .env.* below the root, follows a linked file, skips junk folders and linked folders", () => {
   const root = tmp();
   put(root, ".env", 'A=FAKE-value-one\nB="FAKE-value-two"\nC=short\n# D=FAKE-comment-value\nexport E=\'FAKE-value-three\'\n');
   put(root, "sub/.ENV.local", "F=FAKE-value-four\n");
@@ -65,13 +74,14 @@ test("readEnvValues reads .env and .env.* below the root, skips junk folders and
   put(root, ".agentroster/r/.env", "H=FAKE-skipped-value2\n");
   const outside = tmp();
   put(outside, ".env", "I=FAKE-outside-value\n");
-  fs.symlinkSync(outside, path.join(root, "linked"));
+  put(outside, "in-folder/.env", "J=FAKE-linked-folder-value\n");
+  fs.symlinkSync(path.join(outside, "in-folder"), path.join(root, "linked"));
   fs.symlinkSync(path.join(outside, ".env"), path.join(root, "sub", ".env.link"));
   const values = readEnvValues(root);
-  for (const want of ["FAKE-value-one", "FAKE-value-two", "FAKE-value-three", "FAKE-value-four"]) {
+  for (const want of ["FAKE-value-one", "FAKE-value-two", "FAKE-value-three", "FAKE-value-four", "FAKE-outside-value"]) {
     assert.ok(values.includes(want), want);
   }
-  assert.ok(!values.some((v) => /skipped|outside|comment|short/.test(v)));
+  assert.ok(!values.some((v) => /skipped|linked-folder|comment|short/.test(v)));
 });
 
 test("readEnvValues gives [] when there is no .env", () => {
@@ -406,23 +416,34 @@ test("JSONC: a trailing comma followed by a comment is read", () => {
   assert.ok(readConfigValues(root).includes("FAKE-jsonc-token-9"));
 });
 
-test("CLI: linked .env files are counted as not compared, without their contents", () => {
+test("CLI: a linked .env file is compared, without printing its contents", () => {
   const project = tmp();
   const outside = tmp();
   const value = "FAKE-linked-env-value";
   put(outside, "real.env", `A=${value}\n`);
   put(project, "app.py", "x\n");
   fs.symlinkSync(path.join(outside, "real.env"), path.join(project, ".env"));
-  fs.mkdirSync(path.join(project, "sub"));
-  fs.symlinkSync(path.join(outside, "real.env"), path.join(project, "sub", ".env.local"));
-  fs.symlinkSync(outside, path.join(project, "linked-folder"));
+  const dir = tmp();
+  put(dir, "map.md", `uses ${value}\n`);
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 1);
+  assert.equal(r.stdout, "leak: map.md:1 (value from .env)\nleaks: 1\n");
+  assert.equal(r.stderr, "");
+  assert.ok(!(r.stdout + r.stderr).includes(value));
+});
+
+test("CLI: a linked .env that cannot be read (broken, a folder) is counted as not compared", () => {
+  const project = tmp();
+  put(project, "app.py", "x\n");
+  fs.symlinkSync(path.join(project, "gone.env"), path.join(project, ".env"));
+  fs.mkdirSync(path.join(project, "a-folder"));
+  fs.symlinkSync(path.join(project, "a-folder"), path.join(project, ".env.local"));
   const dir = tmp();
   put(dir, "map.md", "fine\n");
   const r = run(dir, "--project", project);
   assert.equal(r.status, 0);
   assert.equal(r.stdout, "clean: 1 files\n");
   assert.equal(r.stderr, "not compared: 2 linked .env files\n");
-  assert.ok(!r.stderr.includes(value));
 });
 
 test("CLI: no linked .env files prints nothing on stderr", () => {
@@ -538,4 +559,48 @@ test("secrets in an MCP server's url field are collected (query token and user:p
   assert.ok(values.includes("FAKE-url-token-9"), "query token");
   assert.ok(values.includes("FAKE-pw-123456"), "password");
   assert.ok(!values.includes("mcp.example.test"), "no path words");
+});
+
+test("readEnvValues also reads .envrc and *.env files", () => {
+  const root = tmp();
+  put(root, ".envrc", "export A=FAKE-envrc-value-1\n");
+  put(root, "deploy/prod.env", "B=FAKE-prod-env-value-2\n");
+  const values = readEnvValues(root);
+  assert.ok(values.includes("FAKE-envrc-value-1"));
+  assert.ok(values.includes("FAKE-prod-env-value-2"));
+});
+
+test("readConfigValues reads .npmrc tokens, not its other settings", () => {
+  const root = tmp();
+  put(root, ".npmrc", "//registry.example.test/:_authToken=FAKE-npm-auth-token-1\nregistry=https://registry.example.test/\nalways-auth=true\n");
+  const values = readConfigValues(root);
+  assert.ok(values.includes("FAKE-npm-auth-token-1"));
+  assert.ok(!values.some((v) => v.includes("registry.example.test/") && !v.includes("FAKE")));
+});
+
+test("readConfigValues reads secrets.json and credentials.json string values, not plain words or bare URLs", () => {
+  const root = tmp();
+  put(root, "secrets.json", JSON.stringify({ api: { key: "FAKE-secrets-json-key-1" }, list: ["FAKE-secrets-json-item-2"] }));
+  put(root, "config/credentials.json", JSON.stringify({
+    type: "service_account",
+    client_secret: "FAKE-client-secret-3",
+    token_uri: "https://oauth2.example.test/token",
+    callback: "https://example.test/cb?token=FAKE-url-token-4",
+  }));
+  const values = readConfigValues(root);
+  for (const want of ["FAKE-secrets-json-key-1", "FAKE-secrets-json-item-2", "FAKE-client-secret-3", "FAKE-url-token-4"]) {
+    assert.ok(values.includes(want), want);
+  }
+  assert.ok(!values.includes("service_account"), "a plain word is not a secret");
+  assert.ok(!values.includes("https://oauth2.example.test/token"), "a bare URL is not a secret");
+});
+
+test("CLI: a secrets.json that is not valid JSON fails closed", () => {
+  const project = tmp();
+  put(project, "secrets.json", "{ not json");
+  const dir = tmp();
+  put(dir, "map.md", "fine\n");
+  const r = run(dir, "--project", project);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /secrets\.json \(not valid JSON\)/);
 });

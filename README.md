@@ -68,7 +68,8 @@ outside the code (a prompt in a database, a model left to an SDK's default) is s
 - **It never runs your code**, never installs anything, and never changes your files.
 - **It never opens secret files** (`.env`, keys, credentials), and it is told to cite a secret
   by file and line only, writing `[redacted]` in its place. Before it finishes, a script checks
-  the output for anything that looks like a secret or matches a value from your `.env`.
+  the output for anything that looks like a secret or matches a value from your `.env` or
+  secret config files.
 - **It may ask you questions.** Some things are a judgement call, mainly an agent's type (is it
   an assistant or a researcher?). When the skill isn't sure, it shows its pick and the runner-up
   and asks you. If you agree, it saves your answers in **`agentroster.json`** at the project root,
@@ -143,7 +144,7 @@ Node.js 20 or later and nothing else. Paths are relative to the skill folder.
 | `detect.mjs <project> [--out <file>] [--exclude <dir>]...` | Searches a project for signs of model use, without running anything |
 | `check-map.mjs <run>` | Checks `map.md` against `coverage.json` |
 | `check-cards.mjs <run> --project <project>` | Checks the cards against the map and the code: the same agents everywhere, evidence for every value, each quote on its line, stored answers applied (stale ones printed as `note:` lines) |
-| `redact-check.mjs <run> [--project <project>]` | Fails a run whose output holds anything secret-shaped or a value from the project's `.env`, MCP or settings files; prints where, never the value |
+| `redact-check.mjs <run> [--project <project>]` | Fails a run whose output holds anything secret-shaped or a value from the project's `.env`, MCP, settings, `.npmrc`, `secrets.json` or `credentials.json` files; prints where, never the value |
 | `render-cards.mjs <run>` | Writes `cards/<id>.md` and `cards.html` into the run folder |
 | `match-golden.mjs [--only coverage] <expected> <run>` | Compares a run with a reviewed answer key, one line per difference |
 

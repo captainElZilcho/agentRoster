@@ -282,8 +282,9 @@ After the checking loop in `VALIDATION.md`, run these from the skill folder, in 
 2. `node <skill>/scripts/check-map.mjs <run>`: the eight headings, the inventory, and the same ids
    in `map.md` and `coverage.json`.
 3. `node <skill>/scripts/redact-check.mjs <run> --project <project>`: no secret-shaped text, no
-   value from the project's `.env` files ("value from .env") and no secret value from its MCP and
-   Claude Code settings files ("value from config") in the run folder, and no link in it. It
+   value from the project's `.env`, `.env.*`, `.envrc` and `*.env` files ("value from .env") and
+   no secret value from its MCP and Claude Code settings files, `.npmrc`, `secrets.json` or
+   `credentials.json` ("value from config") in the run folder, and no link in it. It
    prints only the file, line and kind of each hit, never the value.
 
 A failure is fixed and the check run again, starting from the first. For a leak, replace the

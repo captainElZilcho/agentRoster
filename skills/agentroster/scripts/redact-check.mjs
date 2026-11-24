@@ -1,12 +1,12 @@
 // Blocks a run that copied a secret into its output folder. It looks for secret-shaped text
-// and for values from the project's .env files. It never prints, returns or logs a matched
+// and for values from the project's .env files and secret-holding config files. It never prints, returns or logs a matched
 // value: a hit is only a file, a line number and a kind. With --project it also checks the
 // project's agentroster.json, the one file the skill may write there.
 // Usage: redact-check.mjs <run-dir> [--project <dir>]
 
-import { lstatSync, readFileSync, readdirSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { isEntryPoint } from "./lib/cli.mjs";
+import { isEntryPoint, MAX_FILE_BYTES } from "./lib/cli.mjs";
 import { compareText } from "./lib/order.mjs";
 
 /** The shapes of well-known secrets. */
@@ -18,6 +18,11 @@ export const SECRET_SHAPES = [
   /xox[abprs]-[A-Za-z0-9-]{10,}/,
   /AIza[0-9A-Za-z_-]{35}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /(?<![A-Za-z0-9])[sr]k_live_[A-Za-z0-9]{16,}/,
+  /gh[ousr]_[A-Za-z0-9]{36}/,
+  /(?<![A-Za-z0-9])npm_[A-Za-z0-9]{36}/,
+  /xoxe[.-][A-Za-z0-9.-]{10,}/,
+  /eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/,
 ];
 
 const MIN_ENV_LENGTH = 8;
@@ -163,12 +168,34 @@ function findClose(body, quote) {
   return -1;
 }
 
-const isEnvName = (rel) => /^\.env(\..+)?$/i.test(rel.split("/").at(-1));
+/** .env, .env.*, .envrc and *.env (prod.env): all in the KEY=value format. */
+const isEnvName = (rel) => /^(\.env(\..+)?|\.envrc|.+\.env)$/i.test(rel.split("/").at(-1));
 
 /**
- * Read the values from .env and .env.* files in a project, to compare in memory only.
- * A file or folder that cannot be read throws (fails closed), with its path in `file`.
- * Linked .env files are not followed; `report.linkedEnv` gets how many there are.
+ * Read a linked file to compare its values in memory: only a regular file under the size cap.
+ * Its text is never printed. Returns null when it cannot be read that way.
+ * @param {string} file
+ * @returns {string|null}
+ */
+function readLinkedFile(file) {
+  let fd;
+  try {
+    fd = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
+    const st = fstatSync(fd);
+    if (!st.isFile() || st.size > MAX_FILE_BYTES) return null;
+    return readFileSync(fd, "utf8");
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+/**
+ * Read the values from .env, .env.*, .envrc and *.env files in a project, to compare in memory
+ * only. A file or folder that cannot be read throws (fails closed), with its path in `file`.
+ * A linked .env file is followed (a monorepo often links a shared one); `report.linkedEnv` gets
+ * how many linked ones could not be read. A linked folder is not followed.
  * @param {string} projectDir
  * @param {{linkedEnv?: number}} [report]
  * @returns {string[]} Values of 8 characters or more.
@@ -177,7 +204,13 @@ export function readEnvValues(projectDir, report = {}) {
   const values = new Set();
   const others = [];
   const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name), others).filter(isEnvName);
-  report.linkedEnv = others.filter((o) => o.kind === "link" && isEnvName(o.path)).length;
+  report.linkedEnv = 0;
+  for (const o of others) {
+    if (o.kind !== "link" || !isEnvName(o.path)) continue;
+    const text = readLinkedFile(path.join(projectDir, o.path));
+    if (text === null) report.linkedEnv++;
+    else for (const v of parseEnv(text)) if (v.length >= MIN_ENV_LENGTH) values.add(v);
+  }
   for (const rel of names) {
     let text;
     try {
@@ -192,6 +225,34 @@ export function readEnvValues(projectDir, report = {}) {
 }
 
 const CONFIG_FILES = /(^|\/)(\.mcp\.json|mcp\.json|\.claude\/settings\.json|\.claude\/settings\.local\.json)$/i;
+const NPMRC = /(^|\/)\.npmrc$/i;
+const SECRET_JSON = /(^|\/)(secrets?|credentials?)\.json$/i;
+
+/** Auth values from an .npmrc (`//host/:_authToken=…`, `_auth=…`, `_password=…`); other settings are not secret. */
+function collectNpmrc(text, out) {
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*[^#;=]*?(_authToken|_auth|_password|token|password)\s*=\s*(.+?)\s*$/i.exec(line);
+    if (m) out.add(m[2].replace(/^(["'])(.*)\1$/, "$2"));
+  }
+}
+
+/**
+ * Every string in a secrets.json or credentials.json, except a plain word ("service_account") or
+ * a bare URL, which are not secrets; a URL's query secrets and password are collected.
+ */
+function collectSecretJson(node, out) {
+  if (typeof node === "string") {
+    if (/^https?:\/\//i.test(node)) collectUrl(node, out);
+    else if (!/^[A-Za-z_]+$/.test(node)) {
+      out.add(node);
+      for (const line of node.split("\n")) out.add(line.trim());
+    }
+  } else if (Array.isArray(node)) {
+    for (const item of node) collectSecretJson(item, out);
+  } else if (node && typeof node === "object") {
+    for (const value of Object.values(node)) collectSecretJson(value, out);
+  }
+}
 
 /** The index just past the closing quote of the JSON string that starts at text[i]. */
 function stringEnd(text, i) {
@@ -311,25 +372,28 @@ function collectConfig(node, inside, out, inArgs = false) {
 }
 
 /**
- * Read secret values from MCP and Claude Code config files in a project, to compare in memory
- * only. A file that cannot be read or parsed throws (fails closed), with its path in `file`.
+ * Read secret values from MCP and Claude Code config files, .npmrc, secrets.json and
+ * credentials.json in a project, to compare in memory only. A file that cannot be read or
+ * parsed throws (fails closed), with its path in `file`.
  * @param {string} projectDir
  * @returns {string[]} Values of 8 characters or more.
  */
 export function readConfigValues(projectDir) {
   const found = new Set();
-  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name)).filter((rel) => CONFIG_FILES.test(rel));
+  const names = walk(projectDir, (name) => SKIP_FOLDERS.has(name))
+    .filter((rel) => CONFIG_FILES.test(rel) || NPMRC.test(rel) || SECRET_JSON.test(rel));
   for (const rel of names) {
     const file = path.join(projectDir, rel);
-    let doc;
     try {
-      doc = JSON.parse(stripJsonc(readFileSync(file, "utf8").replace(/^﻿/, "")));
+      const text = readFileSync(file, "utf8").replace(/^\ufeff/, "");
+      if (NPMRC.test(rel)) collectNpmrc(text, found);
+      else if (SECRET_JSON.test(rel)) collectSecretJson(JSON.parse(text), found);
+      else collectConfig(JSON.parse(stripJsonc(text)), false, found);
     } catch (err) {
       const failure = err instanceof SyntaxError ? Object.assign(new Error("json"), { code: "EJSON" }) : err;
       failure.file = file;
       throw failure;
     }
-    collectConfig(doc, false, found);
   }
   return [...found].filter((v) => v.length >= MIN_ENV_LENGTH).sort(compareText);
 }
